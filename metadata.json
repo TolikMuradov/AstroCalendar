@@ -1,0 +1,7 @@
+{
+  "name": "AstroCalendar",
+  "description": "A mystical AI-powered astrology application that aligns your daily life with cosmic rhythms through personalized insights, lunar rituals, and birth chart analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

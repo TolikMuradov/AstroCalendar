@@ -1,0 +1,61 @@
+/* Global styles for AstroCalendar */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Input styling */
+input {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+input:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Date input styling */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+input[type="date"]::placeholder,
+input[type="time"]::placeholder,
+input[type="datetime-local"]::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Animated gradient button */
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 3s ease infinite;
+}
+
+/* Shimmer effect on hover */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
