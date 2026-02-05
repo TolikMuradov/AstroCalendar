@@ -13,11 +13,24 @@ Based on the codebase review:
 - Implemented caching strategy to minimize API calls
 - Turkish localization completed
 - **Thai language fully integrated** (trilingual support complete - critical for user base)
+- **Profile editing system** added (name + birth date editing with validation)
+- **Dashboard enhanced** with user age, complete zodiac information display
+- **Dark mode improvements** for form inputs and dropdowns
 
 ## Current Focus
-The project is in **feature-complete phase with focus on localization**. Thai language integration just completed as critical market requirement (60% of user base). Core functionality complete, multilingual support now comprehensive (en/tr/th).
+The project is in **user experience enhancement phase**. Thai language integration complete, now focusing on profile management features. Users can now edit their name and birth date with proper validation, and Dashboard displays comprehensive zodiac information including user age.
 
 ## Active Decisions & Considerations
+
+### Profile Management
+- **Editable fields**: Name, birth date (day/month/year separately)
+- **Age constraints**: Users must be 13-110 years old (validated on input)
+- **Year range**: Dynamically calculated based on current year (2026):
+  - Min: 1916 (110 years old)
+  - Max: 2013 (13 years old)
+- **Date validation**: Days adjust based on selected month (e.g., Feb shows 28/29)
+- **Persistence**: Changes saved to localStorage + Firestore immediately
+- **Zodiac recalculation**: Profile recomputes Western/Chinese zodiac on date change
 
 ### API Strategy
 - Using OpenAI's `gpt-4o-mini` model for cost-effectiveness
@@ -94,6 +107,90 @@ Thai (ไทย) is now fully integrated as the third language. Integration incl
 
 ### Why Thai is Critical
 User demographics: ~60% of projected user base speaks Thai. Thai integration was stated as essential by project stakeholder ("cok onemli" - very important). System is now ready for Thai user adoption at launch.
+
+## Profile Editing Implementation Details
+
+### What Was Added
+Complete profile editing system in Profile screen with toggle between view/edit modes.
+
+**Editable Fields:**
+- **Name**: Text input with real-time validation (cannot be empty)
+- **Birth Date**: Separate dropdowns for Day/Month/Year (GÜN AY YIL format)
+
+**Day Selector:**
+- Dynamically adjusts based on selected month
+- February shows 28 or 29 days (leap year aware)
+- Months with 31 days show all 31 options
+- Prevents invalid dates (e.g., Feb 31)
+
+**Month Selector:**
+- 12 months (01-12)
+- Zero-padded display (01, 02, ... 12)
+
+**Year Selector:**
+- Range: Current year - 110 to Current year - 13
+- Example (2026): Shows years 1916 through 2013
+- Scrollable dropdown with all valid years
+- Default: User's current birth year
+
+**Validation:**
+- Name cannot be empty (alert shown)
+- Date cannot be in future (alert shown)
+- Age must be 13-110 years (alert shown)
+- Invalid dates rejected (e.g., 2023-02-30)
+
+**Dark Mode Styling:**
+- Dropdowns use `colorScheme: 'dark'` for native browser controls
+- Option elements styled with `bg-background-dark` and `text-white`
+- Select boxes use `bg-white/10` with white text
+- Fixes contrast issue where white-on-white was unreadable
+
+**Save Flow:**
+1. User clicks Edit button (toggle to edit mode)
+2. Modifies name/date fields
+3. Clicks Check button (save icon)
+4. Validates all fields
+5. Calls `computeProfile(newBirthDate)` to recalculate zodiac
+6. Saves to `storage.saveProfile()` + `storage.saveProfileToFirebase()`
+7. Triggers `onProfileUpdate()` callback in App.tsx
+8. Returns to profile view mode
+
+**Cancel Flow:**
+- Cancel button reverts all fields to original values
+- No save triggered
+- Returns to profile view mode
+
+### Dashboard Enhancements
+
+**User Age Display:**
+- Calculated dynamically from birth date
+- Formula: `currentYear - birthYear` with month/day adjustment
+- Displayed as badge at top: "Age 25"
+- Gold accent styling (`bg-accent-gold/20`)
+
+**Western Zodiac Section:**
+- Shows zodiac symbol (♈, ♉, etc.)
+- Sign name (Aries, Taurus, etc.)
+- Element (Fire, Earth, Air, Water)
+- Element trait in user's language (Vitality/Denge/ชีวิตชีวา)
+
+**Chinese Zodiac Section:**
+- Shows animal emoji (🐉, 🐀, etc.)
+- Animal name (Dragon, Rat, etc.)
+- Element (Metal, Water, Wood, Fire, Earth)
+- Yin/Yang indicator (balanced duality)
+
+**Layout Changes:**
+- Side-by-side grid layout (Western on left, Chinese on right)
+- Age badge above zodiac sections
+- Element trait shown below Western/Chinese grid
+- Energy score circle positioned below zodiac info
+
+**Why This Matters:**
+- Users can correct onboarding mistakes without re-registering
+- Name changes for users who prefer nicknames
+- Birth date corrections recalculate entire astrological profile
+- Dashboard provides complete identity overview at a glance
 
 ### Pattern: Language Extensibility
 Adding future languages follows proven pattern:

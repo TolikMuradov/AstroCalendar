@@ -38,9 +38,15 @@
 ### User Interface
 - [x] Dashboard with daily insights
 - [x] Profile screen with user info and logout
+- [x] **Profile editing** (name + birth date with day/month/year dropdowns)
+- [x] **Age validation** (13-110 years constraint)
+- [x] **Dynamic year range** calculation based on current year
+- [x] **Dashboard user age display** (calculated from birth date)
+- [x] **Dashboard zodiac information** (Western + Chinese complete details)
 - [x] Navigation component (bottom bar)
 - [x] Glassmorphic design system
 - [x] Dark cosmic theme
+- [x] **Dark mode styling for form inputs and dropdowns**
 - [x] Responsive mobile layout (max 480px)
 - [x] Loading states and animations
 - [x] Element-based theming (Fire/Earth/Air/Water gradients)
@@ -129,6 +135,9 @@
 - [ ] House system calculations
 
 ### Settings & Customization
+- [x] **Profile name editing** (with validation)
+- [x] **Birth date editing** (day/month/year separate selectors)
+- [x] **Age-based validation** (13-110 years)
 - [ ] Dark/light theme toggle
 - [ ] Notification preferences
 - [ ] Timezone manual adjustment
@@ -154,7 +163,7 @@
 - No loading skeleton on first dashboard visit
 - Auth loading state briefly shows "Syncing Stars" spinner
 - Navigation bar doesn't highlight active screen in all cases
-- Calendar navigation unclear (if not implemented)
+- ~~Dropdowns white-on-white in dark mode~~ ✅ **FIXED**: Dark mode styling applied
 
 ### Content
 - Fallback insights less detailed than AI-generated
@@ -165,20 +174,23 @@
 
 ### What Works
 ✅ **Core Experience**: Full authentication → onboarding → daily insights → profile management
+✅ **Profile Editing**: Name and birth date editing with age validation (13-110 years)
+✅ **Dashboard Identity**: User age + complete Western & Chinese zodiac information
 ✅ **Reliability**: AI with fallback ensures app never fails
 ✅ **Trilingual**: Full English/Turkish/Thai support (Thai critical for user base)
-✅ **Mobile-Optimized**: Beautiful, responsive, fast
+✅ **Mobile-Optimized**: Beautiful, responsive, fast with dark mode throughout
 ✅ **Calendar**: Monthly spiritual calendar with 1 AI request/month paradigm
 ✅ **Dashboard-Calendar Sync**: Lucky colors consistent across screens
 ✅ **Deployed**: Live on AI Studio
 
 ### What's Next
-The project has a **solid MVP foundation with multilingual support complete**. Thai language is now fully integrated. Next phase should focus on:
-1. Testing Thai user flow end-to-end (sign-in → onboarding → Thai UI → Thai AI insights)
-2. Completing Calendar/Compare/Premium screens (UI complete, but features may need refinement)
+The project has a **solid MVP foundation with profile management complete**. Users can now edit their profiles and view comprehensive zodiac information. Next phase should focus on:
+1. Testing profile editing flow end-to-end (edit name → change birth date → verify zodiac updates)
+2. Testing Dashboard age calculation across different birth dates
 3. Adding engagement features (notifications, streaks)
-4. Implementing payment/subscription system
-5. Enhancing with more astrological data (moon phases, transits)
+4. Completing Premium screen with payment integration
+5. Enhancing Compare screen for partner compatibility
+6. Adding more astrological data (moon phases, transits)
 
 ### Overall Health
 **Excellent** - Clean architecture, working features, good error handling, deployable state. Ready for beta users and iterative enhancement.
