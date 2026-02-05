@@ -219,10 +219,11 @@ const ProfileScreen: React.FC<ProfileProps> = ({ profile, navigate, onLogout, on
                       <select
                         value={editDay}
                         onChange={(e) => setEditDay(parseInt(e.target.value))}
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50 [&>option]:bg-background-dark [&>option]:text-white"
+                        style={{ colorScheme: 'dark' }}
                       >
                         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => (
-                          <option key={d} value={d}>{String(d).padStart(2, '0')}</option>
+                          <option key={d} value={d} className="bg-background-dark text-white">{String(d).padStart(2, '0')}</option>
                         ))}
                       </select>
                       <p className="text-[8px] text-white/30 mt-1">Day</p>
@@ -233,10 +234,11 @@ const ProfileScreen: React.FC<ProfileProps> = ({ profile, navigate, onLogout, on
                       <select
                         value={editMonth}
                         onChange={(e) => setEditMonth(parseInt(e.target.value))}
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50 [&>option]:bg-background-dark [&>option]:text-white"
+                        style={{ colorScheme: 'dark' }}
                       >
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                          <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                          <option key={m} value={m} className="bg-background-dark text-white">{String(m).padStart(2, '0')}</option>
                         ))}
                       </select>
                       <p className="text-[8px] text-white/30 mt-1">Month</p>
@@ -247,10 +249,11 @@ const ProfileScreen: React.FC<ProfileProps> = ({ profile, navigate, onLogout, on
                       <select
                         value={editYear}
                         onChange={(e) => setEditYear(parseInt(e.target.value))}
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50 [&>option]:bg-background-dark [&>option]:text-white"
+                        style={{ colorScheme: 'dark' }}
                       >
                         {yearOptions.map(y => (
-                          <option key={y} value={y}>{y}</option>
+                          <option key={y} value={y} className="bg-background-dark text-white">{y}</option>
                         ))}
                       </select>
                       <p className="text-[8px] text-white/30 mt-1">Year</p>
