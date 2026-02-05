@@ -98,6 +98,11 @@ const App: React.FC = () => {
     navigate('WELCOME');
   };
 
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
+    setUserProfile(updatedProfile);
+    navigate('PROFILE'); // Stay on profile screen
+  };
+
   if (!initialized) return (
     <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center text-white">
       <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
@@ -120,7 +125,7 @@ const App: React.FC = () => {
       case 'CALENDAR': 
         return <CalendarScreen profile={userProfile} navigate={navigate} />;
       case 'PROFILE': 
-        return userProfile ? <ProfileScreen profile={userProfile} onLogout={handleLogout} navigate={navigate} /> : null;
+        return userProfile ? <ProfileScreen profile={userProfile} onLogout={handleLogout} navigate={navigate} onProfileUpdate={handleProfileUpdate} /> : null;
       case 'PREMIUM': 
         return <PremiumScreen onClose={() => navigate('DASHBOARD')} />;
       case 'COMPARE': 

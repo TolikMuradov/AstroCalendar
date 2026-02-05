@@ -105,6 +105,19 @@ const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
   const currentYearAnimal = getCurrentYearAnimal();
   const chineseIcon = getChineseAnimalIcon(chineseAnimal);
 
+  // Calculate user's age
+  const calculateAge = () => {
+    const birthDate = new Date(profile.birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+  const userAge = calculateAge();
+
   const elementColors: any = {
     Fire: "from-red-500/20 to-orange-500/5",
     Earth: "from-emerald-500/20 to-brown-500/5",
@@ -207,30 +220,39 @@ const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
           <section className="relative glass-panel rounded-[40px] p-8 border-white/5 flex flex-col items-center overflow-hidden shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
             
-            <div className="flex justify-between w-full mb-8 z-10">
-               <div className="flex flex-col items-center flex-1">
-                  <span className="text-5xl mb-3 drop-shadow-[0_0_15px_rgba(243,198,35,0.4)] animate-float">{zodiacSymbol}</span>
-                  <p className="text-[9px] text-white/30 uppercase font-bold tracking-[0.2em] mb-1">Western</p>
-                  <p className="text-white font-serif italic text-lg">{westernSign}</p>
+            {/* Age Badge */}
+            <div className="mb-4 px-4 py-2 bg-accent-gold/20 border border-accent-gold/30 rounded-full z-10">
+              <p className="text-[10px] font-bold text-accent-gold uppercase tracking-[0.2em]">Age {userAge}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 w-full mb-8 z-10">
+               {/* Western Zodiac */}
+               <div className="flex flex-col items-center">
+                  <span className="text-4xl mb-3 drop-shadow-[0_0_15px_rgba(243,198,35,0.4)] animate-float">{zodiacSymbol}</span>
+                  <p className="text-[8px] text-white/30 uppercase font-bold tracking-[0.2em] mb-2">Western Zodiac</p>
+                  <p className="text-white font-serif italic text-base font-bold">{westernSign}</p>
+                  <p className="text-[9px] text-accent-gold font-bold mt-1 uppercase">{westernElement}</p>
                </div>
-               <div className="flex flex-col items-center justify-center px-4">
-                  <div className="h-16 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
-               </div>
-               <div className="flex flex-col items-center flex-1">
-                  <span className="text-5xl mb-3 drop-shadow-[0_0_15px_rgba(138,43,226,0.4)] animate-float delay-700">{chineseIcon}</span>
-                  <p className="text-[9px] text-white/30 uppercase font-bold tracking-[0.2em] mb-1">Chinese</p>
-                  <p className="text-white font-serif italic text-lg">{chineseAnimal}</p>
+
+               {/* Chinese Zodiac */}
+               <div className="flex flex-col items-center">
+                  <span className="text-4xl mb-3 drop-shadow-[0_0_15px_rgba(138,43,226,0.4)] animate-float delay-700">{chineseIcon}</span>
+                  <p className="text-[8px] text-white/30 uppercase font-bold tracking-[0.2em] mb-2">Chinese Zodiac</p>
+                  <p className="text-white font-serif italic text-base font-bold">{chineseAnimal}</p>
+                  <div className="flex items-center gap-1 mt-2">
+                    <span className="text-[8px] text-primary font-bold uppercase">{chineseElement}</span>
+                    <span className="size-0.5 bg-white/20 rounded-full"></span>
+                    <span className="text-[8px] text-primary font-bold uppercase">{profile.computedProfile.chineseZodiac.yinYang}</span>
+                  </div>
                </div>
             </div>
 
-            <div className="flex items-center gap-2 mb-10 bg-white/5 px-5 py-2 rounded-full border border-white/10 backdrop-blur-sm">
-                <span className="text-[10px] font-bold text-accent-gold uppercase tracking-[0.2em]">{westernElement}</span>
-                <span className="size-1 bg-white/20 rounded-full"></span>
-                <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{chineseElement} Spirit</span>
+            <div className="flex items-center gap-2 mb-8 bg-white/5 px-5 py-2 rounded-full border border-white/10 backdrop-blur-sm z-10">
+                <span className="text-[10px] font-bold text-accent-gold uppercase tracking-[0.2em]">{westernElement} → {elementTrait}</span>
             </div>
 
             {/* Energy Score Circle */}
-            <div className="relative size-44 flex items-center justify-center mb-8">
+            <div className="relative size-44 flex items-center justify-center mb-8 z-10">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
                  <circle cx="50%" cy="50%" r="42%" fill="none" stroke="currentColor" strokeWidth="4" className="text-white/5" />
                  <circle 
