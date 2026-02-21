@@ -1,55 +1,106 @@
-
 import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Screen } from '../types';
+import Icon from './Icon';
+import { colors, glassPanel } from '../styles/theme';
 
 interface NavigationProps {
   activeScreen: Screen;
   navigate: (screen: Screen) => void;
+  isPremium?: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeScreen, navigate }) => {
-  const items = [
-    { screen: 'DASHBOARD' as Screen, icon: 'home', label: 'Home' },
-    { screen: 'CALENDAR' as Screen, icon: 'calendar_month', label: 'Moon' },
-    { screen: 'PREMIUM' as Screen, icon: 'auto_awesome', label: 'Pro', isCenter: true },
-    { screen: 'COMPARE' as Screen, icon: 'sync_alt', label: 'Sync' },
-    { screen: 'PROFILE' as Screen, icon: 'person', label: 'Soul' },
-  ];
+const premiumScreens = new Set<Screen>(['CALENDAR', 'COMPARE']);
+const items = [
+  { screen: 'DASHBOARD' as Screen, icon: 'home', label: 'Home' },
+  { screen: 'CALENDAR' as Screen, icon: 'calendar_month', label: 'Moon' },
+  { screen: 'TAROT' as Screen, icon: 'style', label: 'Tarot', isCenter: true },
+  { screen: 'COMPARE' as Screen, icon: 'sync_alt', label: 'Sync' },
+  { screen: 'PROFILE' as Screen, icon: 'person', label: 'Soul' },
+];
 
+const Navigation: React.FC<NavigationProps> = ({ activeScreen, navigate, isPremium = false }) => {
   return (
-    <nav className="fixed bottom-6 left-4 right-4 max-w-sm mx-auto glass-panel rounded-full flex justify-between items-center h-16 px-4 z-[9999] shadow-2xl border-white/5 backdrop-blur-xl">
+    <View style={styles.container}>
       {items.map((item) => {
         const isActive = activeScreen === item.screen;
-        
+
         if (item.isCenter) {
           return (
-            <button 
-              key={item.screen}
-              onClick={() => navigate(item.screen)}
-              className={`-translate-y-4 size-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${
-                isActive ? 'bg-accent-gold text-black scale-110 shadow-accent-gold/40' : 'bg-primary text-white shadow-primary/40 hover:scale-105'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[28px]" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "" }}>{item.icon}</span>
-            </button>
+            <Pressable key={item.screen} onPress={() => navigate(item.screen)} style={[styles.centerBtn, isActive ? styles.centerActive : styles.centerInactive]}>
+              <Icon name={item.icon} size={28} color={isActive ? '#000' : '#fff'} />
+            </Pressable>
           );
         }
 
         return (
-          <button 
-            key={item.screen}
-            onClick={() => navigate(item.screen)}
-            className={`flex flex-col items-center justify-center w-12 transition-all group ${
-              isActive ? 'text-primary' : 'text-white/30 hover:text-white/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[24px] group-active:scale-90 transition-transform" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "" }}>{item.icon}</span>
-            <span className="text-[9px] font-bold uppercase tracking-tighter mt-0.5">{item.label}</span>
-          </button>
+          <Pressable key={item.screen} onPress={() => navigate(item.screen)} style={styles.navItem}>
+            <Icon name={item.icon} size={24} color={isActive ? colors.primary : 'rgba(255,255,255,0.3)'} />
+            <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
+            {!isPremium && premiumScreens.has(item.screen) && (
+              <View style={styles.lockBadge}>
+                <Icon name="lock" size={8} color="rgba(243,198,35,0.6)" />
+              </View>
+            )}
+          </Pressable>
         );
       })}
-    </nav>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    height: 64,
+    borderRadius: 999,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    ...glassPanel,
+    backgroundColor: 'rgba(10,1,24,0.85)',
+    zIndex: 9999,
+    elevation: 20,
+  },
+  navItem: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.3)',
+    marginTop: 2,
+    letterSpacing: -0.5,
+  },
+  labelActive: { color: colors.primary },
+  centerBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -32,
+    elevation: 8,
+  },
+  centerActive: {
+    backgroundColor: colors.accentGold,
+  },
+  centerInactive: {
+    backgroundColor: colors.primary,
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+  },
+});
 
 export default Navigation;

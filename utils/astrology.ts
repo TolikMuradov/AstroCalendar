@@ -115,8 +115,26 @@ export const getFallbackDailyInsight = (profile: UserProfile, date: string): Dai
     focusOn: [],
     avoid: [],
     ritual: {
-      title: profile.locale === 'tr' ? "Işık Ritüeli" : profile.locale === 'th' ? "พิธีแสง" : "Light Ritual",
-      steps: profile.locale === 'tr' ? ["Gözlerini kapat.", "Işığı hisset."] : profile.locale === 'th' ? ["ปิดตาของคุณ", "สัมผัสแสง"] : ["Close eyes.", "Feel the light."]
+      title: profile.locale === 'tr' ? "Günün Ritüeli" : profile.locale === 'th' ? "พิธีประจำวัน" : "Today's Ritual",
+      steps: profile.locale === 'tr' ? [
+        "3 derin nefes al ve şiddeti bırak",
+        "Bugün için bir niyet belirle (başarı, sevgi, huzur)",
+        "Dışarı çık ve 5 dakika doğada zaman geçir",
+        "Kendine teşekkür et ve bir hoşlanmışlığını yazıp dikra et",
+        "Günü başlatmaya hazır olun, kendine güven"
+      ] : profile.locale === 'th' ? [
+        "หายใจลึก 3 ครั้งและปล่อยความตึงเครียด",
+        "กำหนด 'เจตนา' สำหรับวันนี้ (ความสำเร็จ ความรักหรือสันติภาพ)",
+        "ออกไปข้างนอกและใช้เวลา 5 นาทีในธรรมชาติ",
+        "ให้เกียรติตัวเองและเขียนสิ่งที่คุณขอบคุณ",
+        "เริ่มวันของคุณด้วยความมั่นใจ"
+      ] : [
+        "Take 3 deep breaths and release tension",
+        "Set an intention for today (success, love, peace)",
+        "Step outside and spend 5 minutes in nature",
+        "Write or say one thing you're grateful for",
+        "Begin your day with confidence and self-belief"
+      ]
     },
     generatedAt: new Date().toISOString()
   };

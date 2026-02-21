@@ -1,72 +1,96 @@
-
-import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight, TarotReading } from '../types';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const PREFIX = 'astro_v1_';
 
 export const storage = {
-  setLocale: (locale: Locale) => localStorage.setItem(`${PREFIX}locale`, locale),
-  getLocale: (): Locale => (localStorage.getItem(`${PREFIX}locale`) as Locale) || 'en',
-  
-  setProfile: (profile: UserProfile) => localStorage.setItem(`${PREFIX}profile`, JSON.stringify(profile)),
-  getProfile: (): UserProfile | null => {
-    const data = localStorage.getItem(`${PREFIX}profile`);
+  async setLocale(locale: Locale): Promise<void> {
+    await AsyncStorage.setItem(`${PREFIX}locale`, locale);
+  },
+  async getLocale(): Promise<Locale> {
+    const val = await AsyncStorage.getItem(`${PREFIX}locale`);
+    return (val as Locale) || 'en';
+  },
+
+  async setProfile(profile: UserProfile): Promise<void> {
+    await AsyncStorage.setItem(`${PREFIX}profile`, JSON.stringify(profile));
+  },
+  async saveProfile(profile: UserProfile): Promise<void> {
+    await AsyncStorage.setItem(`${PREFIX}profile`, JSON.stringify(profile));
+  },
+  async getProfile(): Promise<UserProfile | null> {
+    const data = await AsyncStorage.getItem(`${PREFIX}profile`);
     return data ? JSON.parse(data) : null;
   },
-  
-  getDailyCache: (uid: string, date: string, locale: Locale): DailyInsight | null => {
+
+  async getDailyCache(uid: string, date: string, locale: Locale): Promise<DailyInsight | null> {
     const key = `${PREFIX}daily_${uid}_${date}_${locale}`;
-    const data = localStorage.getItem(key);
+    const data = await AsyncStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   },
-  setDailyCache: (uid: string, insight: DailyInsight) => {
+  async setDailyCache(uid: string, insight: DailyInsight): Promise<void> {
     const key = `${PREFIX}daily_${uid}_${insight.date}_${insight.locale}`;
-    localStorage.setItem(key, JSON.stringify(insight));
+    await AsyncStorage.setItem(key, JSON.stringify(insight));
   },
-  
-  getYearlyCache: (uid: string, year: number, locale: Locale): YearlyInsight | null => {
+
+  async getYearlyCache(uid: string, year: number, locale: Locale): Promise<YearlyInsight | null> {
     const key = `${PREFIX}yearly_${uid}_${year}_${locale}`;
-    const data = localStorage.getItem(key);
+    const data = await AsyncStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   },
-  setYearlyCache: (uid: string, insight: YearlyInsight) => {
+  async setYearlyCache(uid: string, insight: YearlyInsight): Promise<void> {
     const key = `${PREFIX}yearly_${uid}_${insight.year}_${insight.locale}`;
-    localStorage.setItem(key, JSON.stringify(insight));
+    await AsyncStorage.setItem(key, JSON.stringify(insight));
   },
 
-  // Monthly calendar insights (1 AI request per month)
-  getMonthlyCache: (uid: string, year: number, month: number, locale: Locale): MonthlyInsight | null => {
+  async getMonthlyCache(uid: string, year: number, month: number, locale: Locale): Promise<MonthlyInsight | null> {
     const key = `${PREFIX}monthly_${uid}_${year}_${month}_${locale}`;
-    const data = localStorage.getItem(key);
+    const data = await AsyncStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   },
-  setMonthlyCache: (uid: string, insight: MonthlyInsight) => {
+  async setMonthlyCache(uid: string, insight: MonthlyInsight): Promise<void> {
     const key = `${PREFIX}monthly_${uid}_${insight.year}_${insight.month}_${insight.locale}`;
-    localStorage.setItem(key, JSON.stringify(insight));
+    await AsyncStorage.setItem(key, JSON.stringify(insight));
   },
 
-  // Firebase sync for user profiles
+  async getTarotHistory(uid: string): Promise<TarotReading[]> {
+    const key = `${PREFIX}tarot_history_${uid}`;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  },
+  async saveTarotReading(uid: string, reading: TarotReading): Promise<void> {
+    const key = `${PREFIX}tarot_history_${uid}`;
+    const history = await storage.getTarotHistory(uid);
+    history.unshift(reading);
+    const trimmed = history.slice(0, 50);
+    await AsyncStorage.setItem(key, JSON.stringify(trimmed));
+  },
+  async getDailyTarotReading(uid: string, date: string): Promise<TarotReading | null> {
+    const history = await storage.getTarotHistory(uid);
+    return history.find(r => r.date === date) || null;
+  },
+
   async saveProfileToFirebase(profile: UserProfile): Promise<void> {
     try {
       const userRef = doc(db, 'users', profile.uid);
-      await setDoc(userRef, {
+      const data: Record<string, unknown> = {
         name: profile.name,
-        email: profile.email,
         birthDate: profile.birthDate,
-        birthTime: profile.birthTime,
-        birthPlace: profile.birthPlace,
         timezone: profile.timezone,
         locale: profile.locale,
-        focusAreas: profile.focusAreas,
+        focusAreas: profile.focusAreas || [],
         computedProfile: profile.computedProfile,
-        subscription: profile.subscription,
-        updatedAt: new Date().toISOString()
-      });
-      console.log('Profile saved to Firebase');
+        subscription: profile.subscription || { isPremium: false },
+        updatedAt: new Date().toISOString(),
+      };
+      if (profile.email) data.email = profile.email;
+      if (profile.birthTime) data.birthTime = profile.birthTime;
+      if (profile.birthPlace) data.birthPlace = profile.birthPlace;
+      await setDoc(userRef, data);
     } catch (error) {
-      console.error('Error saving profile to Firebase:', error);
-      throw error;
+      console.warn('Firebase save skipped:', error instanceof Error ? error.message : error);
     }
   },
 
@@ -74,10 +98,8 @@ export const storage = {
     try {
       const userRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userRef);
-      
       if (userSnap.exists()) {
         const data = userSnap.data();
-        console.log('Profile loaded from Firebase');
         return {
           uid,
           name: data.name,
@@ -89,19 +111,21 @@ export const storage = {
           locale: data.locale,
           focusAreas: data.focusAreas,
           computedProfile: data.computedProfile,
-          subscription: data.subscription
+          subscription: data.subscription,
         };
       }
-      
-      console.log('No profile found in Firebase');
       return null;
     } catch (error) {
-      console.error('Error loading profile from Firebase:', error);
+      console.warn('Firebase read skipped:', error instanceof Error ? error.message : error);
       return null;
     }
   },
 
-  clearAll: () => {
-    localStorage.clear();
-  }
+  async clearAll(): Promise<void> {
+    const keys = await AsyncStorage.getAllKeys();
+    const appKeys = keys.filter(k => k.startsWith(PREFIX));
+    if (appKeys.length > 0) {
+      await AsyncStorage.multiRemove(appKeys);
+    }
+  },
 };

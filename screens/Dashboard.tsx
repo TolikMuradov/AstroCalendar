@@ -1,11 +1,22 @@
-
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Screen, UserProfile, DailyInsight, YearlyInsight, MonthlyDayInsight } from '../types';
-import { generateDailyInsight, generateYearlyInsight } from '../services/geminiService';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, Image, Dimensions, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { UserProfile, DailyInsight, YearlyInsight, Screen, LUCKY_LOCKED_COST, DAILY_REWARD_LIMIT } from '../types';
 import { storage } from '../services/storage';
+import { coinService, CoinBalance } from '../services/coinService';
+import { generateDailyInsight, generateYearlyInsight } from '../services/geminiService';
+import { getFallbackDailyInsight, getFallbackYearlyInsight, getZodiacIcon, getChineseAnimalIcon, getElementTrait, getCurrentYearAnimal } from '../utils/astrology';
+import { getLuckyUnlocksForToday, addLuckyUnlockForToday } from '../utils/dailyState';
+import { WesternZodiacImages, ChineseZodiacImages } from '../utils/zodiacImages';
 import { translations } from '../i18n/translations';
-import { getFallbackDailyInsight, getFallbackYearlyInsight, getZodiacIcon, getElementTrait, getChineseAnimalIcon, getCurrentYearAnimal } from '../utils/astrology';
+import Icon from '../components/Icon';
+import CoinDisplay from '../components/CoinDisplay';
 import Navigation from '../components/Navigation';
+import RewardedAdModal from '../components/RewardedAdModal';
+import CosmicLoader from '../components/CosmicLoader';
+import { colors, glassPanel } from '../styles/theme';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface DashboardProps {
   profile: UserProfile;
@@ -13,370 +24,391 @@ interface DashboardProps {
 }
 
 const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
+  const [locale, setLocale] = useState(profile.locale || 'en');
+  const t = translations[locale];
+  const today = new Date().toISOString().split('T')[0];
+
   const [insight, setInsight] = useState<DailyInsight | null>(null);
-  const [yearlyInsight, setYearlyInsight] = useState<YearlyInsight | null>(null);
-  const [todayFromMonthly, setTodayFromMonthly] = useState<MonthlyDayInsight | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
-  const fetchingRef = useRef(false);
-  
-  const t = translations[profile.locale] || translations.en;
+  const [yearly, setYearly] = useState<YearlyInsight | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [yearlyLoading, setYearlyLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
 
-  const getLocalDateKey = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
+  // Coin & ad state
+  const [coinBalance, setCoinBalance] = useState<CoinBalance>({ coins: 0, rewardCountToday: 0, dailyLimit: DAILY_REWARD_LIMIT, canWatchAd: true });
+  const [showAdModal, setShowAdModal] = useState(false);
 
-  const fetchInsights = useCallback(async () => {
-    if (!profile?.uid || fetchingRef.current) return;
-    
-    const todayKey = getLocalDateKey();
-    const currentYear = new Date().getFullYear();
-    
-    const cachedDaily = storage.getDailyCache(profile.uid, todayKey, profile.locale);
-    const cachedYearly = storage.getYearlyCache(profile.uid, currentYear, profile.locale);
-    
-    if (cachedDaily) setInsight(cachedDaily);
-    if (cachedYearly) setYearlyInsight(cachedYearly);
-    
-    if (cachedDaily && cachedYearly) return;
+  // Lucky unlocks
+  const [unlockedIndices, setUnlockedIndices] = useState<number[]>([]);
+  const isPremium = profile.subscription?.isPremium;
 
-    setLoading(true);
-    setIsOfflineMode(false);
-    fetchingRef.current = true;
+  // Ritual checkboxes
+  const [checkedSteps, setCheckedSteps] = useState<boolean[]>([]);
 
-    try {
-      let dailyData = cachedDaily;
-      if (!dailyData) {
-        dailyData = await generateDailyInsight(profile, todayKey);
-        storage.setDailyCache(profile.uid, dailyData);
-        setInsight(dailyData);
-      }
+  // Glow animation for lucky color
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
-      let yearlyData = cachedYearly;
-      if (!yearlyData) {
-        yearlyData = await generateYearlyInsight(profile, currentYear);
-        storage.setYearlyCache(profile.uid, yearlyData);
-        setYearlyInsight(yearlyData);
-      }
-    } catch (e: any) {
-      console.error("Dashboard Insight Error:", e);
-      console.warn("AI Engine currently transitioning. Using celestial fallback.");
-      setIsOfflineMode(true);
-      
-      const fallbackDaily = cachedDaily || getFallbackDailyInsight(profile, todayKey);
-      setInsight(fallbackDaily);
-      storage.setDailyCache(profile.uid, fallbackDaily);
+  // Load initial data
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: true })
+      ])
+    ).start();
 
-      const fallbackYearly = cachedYearly || getFallbackYearlyInsight(profile, currentYear);
-      setYearlyInsight(fallbackYearly);
-      storage.setYearlyCache(profile.uid, fallbackYearly);
-    } finally {
-      setLoading(false);
-      fetchingRef.current = false;
-    }
-  }, [profile]);
+    (async () => {
+      const loc = await storage.getLocale();
+      if (loc) setLocale(loc);
+    })();
+  }, []);
 
   useEffect(() => {
-    fetchInsights();
-    
-    // Check for monthly calendar insight and get today's data
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const today = now.getDate();
-    
-    const monthlyCache = storage.getMonthlyCache(profile.uid, currentYear, currentMonth, profile.locale);
-    if (monthlyCache) {
-      const todayData = monthlyCache.days.find(d => d.day === today);
-      if (todayData) {
-        setTodayFromMonthly(todayData);
+    loadInsight();
+    loadCoins();
+    loadUnlocks();
+  }, []);
+
+  const loadCoins = async () => {
+    try {
+      const bal = await coinService.getBalance();
+      setCoinBalance(bal);
+    } catch { }
+    // Realtime subscribe
+    return coinService.subscribe((bal) => setCoinBalance(bal));
+  };
+
+  const loadUnlocks = async () => {
+    const unlocks = await getLuckyUnlocksForToday(profile.uid);
+    setUnlockedIndices(unlocks);
+  };
+
+  const loadInsight = async () => {
+    setLoading(true);
+    setError(null);
+    setIsFallback(false);
+
+    // Check cache
+    const cached = await storage.getDailyCache(profile.uid, today, locale);
+    if (cached) {
+      setInsight(cached);
+      setCheckedSteps(new Array(cached.ritual?.steps?.length || 0).fill(false));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await generateDailyInsight(profile, today);
+      await storage.setDailyCache(profile.uid, result);
+      setInsight(result);
+      setCheckedSteps(new Array(result.ritual?.steps?.length || 0).fill(false));
+    } catch (err: any) {
+      console.error('Daily insight error:', err);
+      const fallback = getFallbackDailyInsight(profile, today);
+      setInsight(fallback);
+      setCheckedSteps(new Array(fallback.ritual?.steps?.length || 0).fill(false));
+      setIsFallback(true);
+      if (err.message?.includes('Rate') || err.message?.includes('429')) {
+        setError(t.errorQuota);
       }
+    } finally {
+      setLoading(false);
     }
-  }, [fetchInsights, profile.uid, profile.locale]);
-
-  const westernSign = profile.computedProfile.westernZodiac.sign;
-  const westernElement = profile.computedProfile.westernZodiac.element;
-  const elementTrait = getElementTrait(westernElement, profile.locale);
-  const zodiacSymbol = getZodiacIcon(westernSign);
-
-  const chineseAnimal = profile.computedProfile.chineseZodiac.animal;
-  const chineseElement = profile.computedProfile.chineseZodiac.element;
-  const currentYearAnimal = getCurrentYearAnimal();
-  const chineseIcon = getChineseAnimalIcon(chineseAnimal);
-
-  // Calculate user's age
-  const calculateAge = () => {
-    const birthDate = new Date(profile.birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-  const userAge = calculateAge();
-
-  const elementColors: any = {
-    Fire: "from-red-500/20 to-orange-500/5",
-    Earth: "from-emerald-500/20 to-brown-500/5",
-    Air: "from-sky-500/20 to-indigo-500/5",
-    Water: "from-blue-600/20 to-indigo-900/5"
   };
 
-  // Color name to hex mapping for lucky color display
-  const colorNameToHex = (colorName: string): string => {
-    const colorMap: Record<string, string> = {
-      // Reds & Pinks
-      'red': '#ef4444', 'crimson': '#dc143c', 'scarlet': '#ff2400', 'ruby': '#e0115f',
-      'rose': '#ff007f', 'pink': '#ec4899', 'coral': '#ff7f50', 'salmon': '#fa8072',
-      'kırmızı': '#ef4444', 'pembe': '#ec4899', 'mercan': '#ff7f50',
-      // Oranges
-      'orange': '#f97316', 'tangerine': '#ff9966', 'peach': '#ffcba4', 'amber': '#ffbf00',
-      'turuncu': '#f97316', 'portakal': '#f97316',
-      // Yellows & Golds
-      'yellow': '#eab308', 'gold': '#ffd700', 'golden': '#ffd700', 'lemon': '#fff44f',
-      'sunshine': '#fffd37', 'honey': '#eb9605',
-      'sarı': '#eab308', 'altın': '#ffd700',
-      // Greens
-      'green': '#22c55e', 'emerald': '#50c878', 'emerald green': '#50c878', 'jade': '#00a86b', 'mint': '#3eb489',
-      'lime': '#84cc16', 'olive': '#808000', 'forest': '#228b22', 'sage': '#9dc183',
-      'teal': '#14b8a6', 'turquoise': '#40e0d0',
-      'yeşil': '#22c55e', 'zümrüt': '#50c878', 'nane': '#3eb489', 'limon': '#84cc16',
-      // Blues
-      'blue': '#3b82f6', 'navy': '#000080', 'royal': '#4169e1', 'sky': '#0ea5e9',
-      'azure': '#007fff', 'cobalt': '#0047ab', 'sapphire': '#0f52ba', 'indigo': '#4b0082',
-      'cyan': '#06b6d4', 'aqua': '#00ffff', 'ocean': '#006994',
-      'mavi': '#3b82f6', 'lacivert': '#000080', 'gökyüzü': '#0ea5e9',
-      // Purples
-      'purple': '#a855f7', 'violet': '#8b5cf6', 'lavender': '#e6e6fa', 'lilac': '#c8a2c8',
-      'plum': '#dda0dd', 'magenta': '#ff00ff', 'orchid': '#da70d6', 'amethyst': '#9966cc',
-      'mor': '#a855f7', 'menekşe': '#8b5cf6', 'lavanta': '#e6e6fa',
-      // Browns & Neutrals
-      'brown': '#92400e', 'chocolate': '#7b3f00', 'copper': '#b87333', 'bronze': '#cd7f32',
-      'tan': '#d2b48c', 'beige': '#f5f5dc', 'cream': '#fffdd0',
-      'kahverengi': '#92400e', 'bej': '#f5f5dc',
-      // Blacks, Whites, Grays
-      'black': '#1f2937', 'white': '#f9fafb', 'silver': '#c0c0c0', 'gray': '#6b7280', 'grey': '#6b7280',
-      'siyah': '#1f2937', 'beyaz': '#f9fafb', 'gümüş': '#c0c0c0', 'gri': '#6b7280',
-      // Special
-      'maroon': '#800000', 'burgundy': '#800020', 'wine': '#722f37', 'champagne': '#f7e7ce'
-    };
-    
-    // Try exact match first (case-insensitive)
-    const lower = colorName.toLowerCase().trim();
-    if (colorMap[lower]) return colorMap[lower];
-    
-    // Try to find partial match (e.g., "Royal Purple" -> check for "purple" or "royal")
-    for (const [key, value] of Object.entries(colorMap)) {
-      if (lower.includes(key)) return value;
+  const loadYearly = async () => {
+    const year = new Date().getFullYear();
+    const cached = await storage.getYearlyCache(profile.uid, year, locale);
+    if (cached) { setYearly(cached); return; }
+
+    setYearlyLoading(true);
+    try {
+      const result = await generateYearlyInsight(profile, year);
+      await storage.setYearlyCache(profile.uid, result);
+      setYearly(result);
+    } catch {
+      setYearly(getFallbackYearlyInsight(profile, year));
+    } finally {
+      setYearlyLoading(false);
     }
-    
-    // Log if no match found for debugging
-    console.warn('Color not found in mapping:', colorName, '- using default purple');
-    
-    // Default purple if no match
-    return '#8a2be2';
   };
 
-  // Use color from monthly calendar if available, otherwise fall back to daily insight
-  const displayColor = todayFromMonthly?.wearColor || insight?.color || 'Purple';
-  const luckyColorHex = colorNameToHex(displayColor);
+  const handleUnlockLucky = async (index: number) => {
+    if (isPremium || unlockedIndices.includes(index)) return;
+    if (coinBalance.coins < LUCKY_LOCKED_COST) {
+      setShowAdModal(true);
+      return;
+    }
+    try {
+      await coinService.spendCoins(LUCKY_LOCKED_COST);
+      await addLuckyUnlockForToday(profile.uid, index);
+      setUnlockedIndices(prev => [...prev, index]);
+    } catch (err) {
+      console.error('Unlock error:', err);
+    }
+  };
+
+  const toggleStep = (i: number) => {
+    setCheckedSteps(prev => { const next = [...prev]; next[i] = !next[i]; return next; });
+  };
+
+  const zodiacIcon = getZodiacIcon(profile.computedProfile.westernZodiac.sign);
+  const chineseIcon = getChineseAnimalIcon(profile.computedProfile.chineseZodiac.animal);
+  const elementTrait = getElementTrait(profile.computedProfile.westernZodiac.element, locale);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-dark pb-32">
-      <div className={`fixed inset-0 bg-gradient-to-b ${elementColors[westernElement] || 'from-primary/10 to-transparent'} nebula-glow pointer-events-none`}></div>
-      
-      <div className="flex-1 animate-fade-in relative z-10">
-        <header className="flex items-center p-6 justify-between sticky top-0 bg-background-dark/80 backdrop-blur-md z-50">
-          <div className="flex items-center gap-4">
-            <div 
-              className="size-10 rounded-full border border-white/10 p-0.5 bg-gradient-to-tr from-primary/50 to-accent-gold/50 cursor-pointer overflow-hidden"
-              onClick={() => navigate('PROFILE')}
-            >
-              <div 
-                 className="w-full h-full rounded-full bg-cover bg-center"
-                 style={{ backgroundImage: `url(https://picsum.photos/seed/${profile?.uid}/100/100)` }}
-              />
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-white text-sm font-bold leading-none mb-1">{profile.name.split(' ')[0]}</h2>
-              <div className="flex items-center gap-1.5">
-                 <span className={`size-1.5 rounded-full ${loading ? 'bg-amber-500 animate-pulse' : (isOfflineMode ? 'bg-blue-400' : 'bg-emerald-500')}`}></span>
-                 <p className="text-[8px] text-white/40 font-bold uppercase tracking-[0.2em]">
-                   {loading ? 'Aligning...' : (isOfflineMode ? 'Omni Engine' : 'AI Active')}
-                 </p>
-              </div>
-            </div>
-          </div>
-          <button className="text-white/20 hover:text-white transition-colors" onClick={() => navigate('CALENDAR')}>
-            <span className="material-symbols-outlined text-xl">calendar_month</span>
-          </button>
-        </header>
+    <View style={styles.container}>
+      <LinearGradient colors={['#0a0202', '#1a0808', '#0a0202']} style={StyleSheet.absoluteFill} />
 
-        <main className="px-6 space-y-6 mt-2">
-          {/* Cosmic Identity Hero */}
-          <section className="relative glass-panel rounded-[40px] p-8 border-white/5 flex flex-col items-center overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
-            
-            {/* Age Badge */}
-            <div className="mb-4 px-4 py-2 bg-accent-gold/20 border border-accent-gold/30 rounded-full z-10">
-              <p className="text-[10px] font-bold text-accent-gold uppercase tracking-[0.2em]">Age {userAge}</p>
-            </div>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>{t.dashboard},</Text>
+            <Text style={styles.userName}>{profile.name}</Text>
+          </View>
+          <CoinDisplay coins={coinBalance.coins} onClick={() => setShowAdModal(true)} />
+        </View>
 
-            <div className="grid grid-cols-2 gap-6 w-full mb-8 z-10">
-               {/* Western Zodiac */}
-               <div className="flex flex-col items-center">
-                  <span className="text-4xl mb-3 drop-shadow-[0_0_15px_rgba(243,198,35,0.4)] animate-float">{zodiacSymbol}</span>
-                  <p className="text-[8px] text-white/30 uppercase font-bold tracking-[0.2em] mb-2">Western Zodiac</p>
-                  <p className="text-white font-serif italic text-base font-bold">{westernSign}</p>
-                  <p className="text-[9px] text-accent-gold font-bold mt-1 uppercase">{westernElement}</p>
-               </div>
+        {/* Zodiac Cards */}
+        <View style={styles.zodiacRow}>
+          <View style={styles.zodiacCard}>
+            <Image source={WesternZodiacImages[profile.computedProfile.westernZodiac.sign]} style={{ width: 64, height: 64, resizeMode: 'contain', marginBottom: 8 }} />
+            <Text style={styles.zodiacSign}>{profile.computedProfile.westernZodiac.sign}</Text>
+            <Text style={styles.zodiacDetail}>{profile.computedProfile.westernZodiac.element} • {elementTrait}</Text>
+          </View>
+          <View style={styles.zodiacCard}>
+            <Image source={ChineseZodiacImages[profile.computedProfile.chineseZodiac.animal]} style={{ width: 64, height: 64, resizeMode: 'contain', marginBottom: 8 }} />
+            <Text style={styles.zodiacSign}>{profile.computedProfile.chineseZodiac.animal}</Text>
+            <Text style={styles.zodiacDetail}>{profile.computedProfile.chineseZodiac.element} • {profile.computedProfile.chineseZodiac.yinYang}</Text>
+          </View>
+        </View>
 
-               {/* Chinese Zodiac */}
-               <div className="flex flex-col items-center">
-                  <span className="text-4xl mb-3 drop-shadow-[0_0_15px_rgba(138,43,226,0.4)] animate-float delay-700">{chineseIcon}</span>
-                  <p className="text-[8px] text-white/30 uppercase font-bold tracking-[0.2em] mb-2">Chinese Zodiac</p>
-                  <p className="text-white font-serif italic text-base font-bold">{chineseAnimal}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <span className="text-[8px] text-primary font-bold uppercase">{chineseElement}</span>
-                    <span className="size-0.5 bg-white/20 rounded-full"></span>
-                    <span className="text-[8px] text-primary font-bold uppercase">{profile.computedProfile.chineseZodiac.yinYang}</span>
-                  </div>
-               </div>
-            </div>
+        {/* Daily Insight */}
+        {loading ? (
+          <View style={styles.loadingCard}>
+            <CosmicLoader size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>{t.connectingCosmos}</Text>
+          </View>
+        ) : insight ? (
+          <>
+            {/* Energy Score */}
+            <View style={styles.insightCard}>
+              {isFallback && (
+                <View style={styles.fallbackBadge}>
+                  <Icon name="info" size={14} color={colors.accentGold} />
+                  <Text style={styles.fallbackText}>{t.fallbackNotice}</Text>
+                </View>
+              )}
 
-            <div className="flex items-center gap-2 mb-8 bg-white/5 px-5 py-2 rounded-full border border-white/10 backdrop-blur-sm z-10">
-                <span className="text-[10px] font-bold text-accent-gold uppercase tracking-[0.2em]">{westernElement} → {elementTrait}</span>
-            </div>
+              <View style={styles.energyRow}>
+                <View>
+                  <Text style={styles.insightTitle}>{insight.title}</Text>
+                  <Text style={styles.insightDate}>{new Date(today).toLocaleDateString(locale === 'tr' ? 'tr-TR' : locale === 'th' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+                </View>
+                <View style={styles.scoreCircle}>
+                  <Text style={styles.scoreText}>{Math.round(insight.energyScore)}</Text>
+                </View>
+              </View>
 
-            {/* Energy Score Circle */}
-            <div className="relative size-44 flex items-center justify-center mb-8 z-10">
-              <svg className="absolute inset-0 w-full h-full -rotate-90">
-                 <circle cx="50%" cy="50%" r="42%" fill="none" stroke="currentColor" strokeWidth="4" className="text-white/5" />
-                 <circle 
-                  cx="50%" cy="50%" r="42%" fill="none" stroke="currentColor" strokeWidth="4" 
-                  strokeDasharray="264"
-                  strokeDashoffset={264 - (264 * (insight?.energyScore || 0) / 100)}
-                  className="text-primary transition-all duration-1000 ease-out"
-                  strokeLinecap="round"
-                 />
-              </svg>
-              <div className="text-center z-10 flex flex-col items-center">
-                <p className="text-5xl font-serif italic text-white drop-shadow-lg">{insight?.energyScore || '--'}</p>
-                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] mt-3">Daily Vibe</p>
-              </div>
-            </div>
+              <Text style={styles.descriptionText}>{insight.description}</Text>
 
-            <div className="text-center space-y-4 w-full relative z-10">
-               <h3 className="text-white text-xl font-serif italic">{insight?.title || 'Mapping Frequencies...'}</h3>
-               <p className="text-white/50 text-sm leading-relaxed font-light italic px-4">
-                 "{insight?.description || 'Aligning your soul with the current celestial movements.'}"
-               </p>
-            </div>
-          </section>
+              {/* Lucky Color */}
+              <View style={{ marginVertical: 16, alignItems: 'center' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>
+                  {t.luckyColor}
+                </Text>
 
-          {/* Lucky Color & Stats Row */}
-          <div className="grid grid-cols-4 gap-3">
-             <div className="col-span-3 grid grid-cols-3 gap-2">
-                {(insight?.luckyNumbers || [0, 0, 0]).map((num, i) => (
-                  <div key={i} className="glass-panel py-5 rounded-[28px] flex flex-col items-center justify-center border-white/5 active:scale-95 transition-transform">
-                     <p className="text-2xl font-serif italic text-accent-gold drop-shadow-sm">{num || '--'}</p>
-                     <p className="text-[7px] text-white/20 uppercase font-bold mt-1 tracking-widest">#{i+1}</p>
-                  </div>
+                <Animated.View style={{
+                  width: 100, height: 100, borderRadius: 50,
+                  backgroundColor: 'rgba(243,198,35,0.15)',
+                  alignItems: 'center', justifyContent: 'center',
+                  borderColor: 'rgba(243,198,35,0.5)', borderWidth: 2,
+                  // Pulsing scale
+                  transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.05] }) }],
+                  // Neon glow effect using shadow
+                  shadowColor: colors.accentGold,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+                  shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 25] }),
+                  elevation: 10
+                }}>
+                  <Text style={{
+                    color: '#fff', fontSize: 14, fontWeight: 'bold', fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 4,
+                    textShadowColor: colors.accentGold, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10
+                  }}>
+                    {insight.color}
+                  </Text>
+                </Animated.View>
+              </View>
+            </View>
+
+            {/* Lucky Numbers */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Icon name="casino" size={20} color={colors.accentGold} />
+                <Text style={styles.sectionTitle}>{t.luckyNumber}</Text>
+              </View>
+              <View style={styles.luckyRow}>
+                {insight.luckyNumbers.map((num, i) => {
+                  const isFirst = i === 0;
+                  const isLocked = !isPremium && !isFirst && !unlockedIndices.includes(i);
+                  return (
+                    <Pressable key={i} onPress={() => isLocked ? handleUnlockLucky(i) : null} style={[styles.luckyBall, isLocked && styles.luckyLocked]}>
+                      {isLocked ? (
+                        <View style={{ alignItems: 'center' }}>
+                          <Icon name="lock" size={20} color="rgba(255,255,255,0.3)" />
+                          <Text style={styles.unlockCost}>{LUCKY_LOCKED_COST} 🪙</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.luckyNum}>{num}</Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Daily Ritual */}
+            {insight.ritual && (
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="self_improvement" size={20} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>{t.ritual}</Text>
+                </View>
+                <Text style={styles.ritualTitle}>{insight.ritual.title}</Text>
+                {insight.ritual.steps.map((step, i) => (
+                  <Pressable key={i} onPress={() => toggleStep(i)} style={styles.stepRow}>
+                    <View style={[styles.checkbox, checkedSteps[i] && styles.checkboxChecked]}>
+                      {checkedSteps[i] && <Icon name="check" size={14} color="#fff" />}
+                    </View>
+                    <Text style={[styles.stepText, checkedSteps[i] && styles.stepDone]}>{step}</Text>
+                  </Pressable>
                 ))}
-             </div>
-             
-             <div className="col-span-1 glass-panel py-5 rounded-[28px] flex flex-col items-center justify-center border-white/5 active:scale-95 transition-transform relative overflow-hidden group">
-                <div 
-                  className="absolute inset-0 opacity-30 pointer-events-none blur-xl group-hover:opacity-50 transition-opacity duration-1000" 
-                  style={{ backgroundColor: luckyColorHex }}
-                ></div>
-                <div 
-                  className="size-8 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.4)] border-2 border-white/50 mb-2" 
-                  style={{ backgroundColor: luckyColorHex, boxShadow: `0 0 20px ${luckyColorHex}` }}
-                ></div>
-                <p className="text-[7px] text-white/30 uppercase font-bold tracking-widest text-center">Color</p>
-                <p className="text-[8px] text-white font-bold text-center px-1 truncate leading-none mt-1">{displayColor}</p>
-             </div>
-          </div>
+              </View>
+            )}
+          </>
+        ) : null}
 
-          {/* Yearly Forecast - Fare/Okuz specific year outlook */}
-          {yearlyInsight && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                 <h4 className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">{new Date().getFullYear()} Year of the {currentYearAnimal}</h4>
-                 <div className="h-px flex-1 bg-white/5 ml-4"></div>
-              </div>
-              <div className="glass-panel p-7 rounded-[40px] border-accent-gold/20 bg-accent-gold/5 relative overflow-hidden group">
-                <div className="absolute -bottom-6 -right-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-1000">
-                   <span className="material-symbols-outlined text-9xl text-accent-gold">menu_book</span>
-                </div>
-                <div className="relative z-10">
-                  <p className="text-accent-gold font-serif italic text-xl leading-tight mb-4">"{yearlyInsight.theme}"</p>
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {yearlyInsight.strengths.map((s, i) => (
-                      <span key={i} className="text-[9px] px-3 py-1 bg-white/5 border border-white/10 rounded-full text-white/70 font-medium">{s}</span>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                    <div>
-                      <p className="text-[8px] text-white/20 uppercase font-bold tracking-widest mb-1">Challenge</p>
-                      <p className="text-[10px] text-white/60">{yearlyInsight.challenges[0]}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-white/20 uppercase font-bold tracking-widest mb-1">Focus</p>
-                      <p className="text-[10px] text-white/60">{yearlyInsight.recommendations[0]}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+        {/* Earn Coins Card */}
+        {!isPremium && (
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={{ fontSize: 20 }}>🪙</Text>
+              <Text style={styles.sectionTitle}>{t.earnCoinsFirst}</Text>
+            </View>
+            <Text style={styles.earnDesc}>{coinBalance.rewardCountToday}/{DAILY_REWARD_LIMIT} {t.coins} earned today</Text>
+            <Pressable onPress={() => setShowAdModal(true)} disabled={!coinBalance.canWatchAd}>
+              <LinearGradient
+                colors={coinBalance.canWatchAd ? [colors.accentGold, '#d4a017'] : ['#333', '#444']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.earnBtn}
+              >
+                <Icon name="play_circle" size={20} color={coinBalance.canWatchAd ? '#0a0202' : '#666'} />
+                <Text style={[styles.earnBtnText, !coinBalance.canWatchAd && { color: '#666' }]}>
+                  {coinBalance.canWatchAd ? 'Watch Ad → +1 🪙' : 'Limit Reached'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Yearly Forecast */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Icon name="auto_awesome" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>{t.yearlyInsight} {new Date().getFullYear()}</Text>
+          </View>
+          {yearly ? (
+            <View style={{ gap: 12 }}>
+              <Text style={styles.yearlyTheme}>{yearly.theme}</Text>
+              <View>
+                <Text style={styles.subLabel}>Strengths</Text>
+                {yearly.strengths.map((s, i) => <Text key={i} style={styles.listItem}>✦ {s}</Text>)}
+              </View>
+              <View>
+                <Text style={styles.subLabel}>Challenges</Text>
+                {yearly.challenges.map((s, i) => <Text key={i} style={styles.listItem}>◈ {s}</Text>)}
+              </View>
+              <View>
+                <Text style={styles.subLabel}>Recommendations</Text>
+                {yearly.recommendations.map((s, i) => <Text key={i} style={styles.listItem}>→ {s}</Text>)}
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={loadYearly} disabled={yearlyLoading}>
+              <LinearGradient colors={[colors.primary, '#991b1b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.generateBtn}>
+                {yearlyLoading ? <CosmicLoader size="small" color="#fff" /> : <Text style={styles.generateText}>{t.generate}</Text>}
+              </LinearGradient>
+            </Pressable>
           )}
+        </View>
 
-          {/* Daily Ritual */}
-          {insight?.ritual && (
-             <section className="space-y-4 pb-16">
-               <div className="flex items-center justify-between px-2">
-                  <h4 className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">Today's Ritual</h4>
-                  <div className="h-px flex-1 bg-white/5 ml-4"></div>
-               </div>
-               <div className="glass-panel p-8 rounded-[40px] border-primary/20 bg-primary/5 shadow-2xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                    <span className="material-symbols-outlined text-8xl text-primary">auto_awesome</span>
-                 </div>
-                 <div className="flex items-center gap-5 mb-8 relative">
-                    <div className="size-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-                       <span className="material-symbols-outlined text-3xl">magic_button</span>
-                    </div>
-                    <div>
-                       <h4 className="text-white font-bold text-base tracking-tight">{insight.ritual.title}</h4>
-                       <p className="text-[10px] text-primary font-bold uppercase tracking-[0.2em] mt-1">Soul Sync Protocol</p>
-                    </div>
-                 </div>
-                 <div className="space-y-6">
-                    {insight.ritual.steps.map((step, i) => (
-                       <div key={i} className="flex gap-5 items-start relative group">
-                          <div className="size-7 rounded-full border border-primary/30 bg-background-dark flex items-center justify-center flex-shrink-0 z-10 shadow-sm transition-colors group-hover:border-primary">
-                             <span className="text-[11px] font-bold text-primary">{i+1}</span>
-                          </div>
-                          {i < insight.ritual.steps.length - 1 && (
-                            <div className="absolute top-7 left-[13px] w-px h-8 bg-primary/10"></div>
-                          )}
-                          <p className="text-white/70 text-sm leading-relaxed pt-1 group-hover:text-white transition-colors">{step}</p>
-                       </div>
-                    ))}
-                 </div>
-               </div>
-             </section>
-          )}
-        </main>
-      </div>
+        {/* Spacer for nav */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
 
-      <Navigation activeScreen="DASHBOARD" navigate={navigate} />
-    </div>
+      {/* Navigation */}
+      <Navigation activeScreen="DASHBOARD" navigate={navigate} isPremium={!!isPremium} />
+
+      {/* Rewarded Ad Modal */}
+      <RewardedAdModal
+        isOpen={showAdModal}
+        onClose={() => setShowAdModal(false)}
+        rewardCountToday={coinBalance.rewardCountToday}
+        onCoinUpdate={(newBalance) => setCoinBalance(newBalance)}
+      />
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 48 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  greeting: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
+  userName: { color: '#fff', fontSize: 24, fontWeight: 'bold', fontStyle: 'italic' },
+  zodiacRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  zodiacCard: { flex: 1, ...glassPanel, borderRadius: 20, padding: 20, alignItems: 'center', gap: 4 },
+  zodiacSign: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginTop: 8 },
+  zodiacDetail: { color: 'rgba(255,255,255,0.4)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  loadingCard: { ...glassPanel, borderRadius: 20, padding: 40, alignItems: 'center', gap: 16, marginBottom: 20 },
+  loadingText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' },
+  insightCard: { ...glassPanel, borderRadius: 20, padding: 20, marginBottom: 16 },
+  fallbackBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: 'rgba(243,198,35,0.05)', borderRadius: 8, padding: 8 },
+  fallbackText: { color: colors.accentGold, fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
+  energyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  insightTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', fontStyle: 'italic', maxWidth: screenWidth - 140 },
+  insightDate: { color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  scoreCircle: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  scoreText: { color: colors.primary, fontSize: 20, fontWeight: 'bold' },
+  descriptionText: { color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 22, marginBottom: 16 },
+  colorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  colorLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold' },
+  colorValue: { color: '#fff', fontSize: 14, fontStyle: 'italic' },
+  sectionCard: { ...glassPanel, borderRadius: 20, padding: 20, marginBottom: 16 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  luckyRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
+  luckyBall: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: colors.accentGold, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(243,198,35,0.05)' },
+  luckyLocked: { borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' },
+  luckyNum: { color: colors.accentGold, fontSize: 22, fontWeight: 'bold', fontStyle: 'italic' },
+  unlockCost: { color: 'rgba(255,255,255,0.3)', fontSize: 8, marginTop: 2 },
+  ritualTitle: { color: colors.primary, fontSize: 14, fontWeight: 'bold', marginBottom: 12 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  checkbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 20, flex: 1 },
+  stepDone: { textDecorationLine: 'line-through', opacity: 0.4 },
+  earnDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 12 },
+  earnBtn: { height: 48, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  earnBtnText: { color: '#0a0202', fontSize: 14, fontWeight: 'bold' },
+  yearlyTheme: { color: colors.accentGold, fontSize: 16, fontWeight: 'bold', fontStyle: 'italic', marginBottom: 8 },
+  subLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
+  listItem: { color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 20, marginLeft: 4 },
+  generateBtn: { height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  generateText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+});
 
 export default DashboardScreen;

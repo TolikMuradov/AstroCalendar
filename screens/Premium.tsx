@@ -1,88 +1,155 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Platform, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { translations } from '../i18n/translations';
+import { storage } from '../services/storage';
+import { Locale, UserProfile } from '../types';
+import Icon from '../components/Icon';
+import { colors, glassPanel } from '../styles/theme';
 
 interface PremiumProps {
+  profile: UserProfile | null;
   onClose: () => void;
 }
 
-const PremiumScreen: React.FC<PremiumProps> = ({ onClose }) => {
+const features = [
+  { key: 'premiumFeature1', icon: 'block' },
+  { key: 'premiumFeature2', icon: 'casino' },
+  { key: 'premiumFeature3', icon: 'style' },
+  { key: 'premiumFeature4', icon: 'calendar_month' },
+  { key: 'premiumFeature5', icon: 'psychology' },
+] as const;
+
+const PremiumScreen: React.FC<PremiumProps> = ({ profile, onClose }) => {
+  const [locale, setLocale] = useState<Locale>('en');
+  const isPremium = profile?.subscription?.isPremium;
+
+  useEffect(() => {
+    (async () => {
+      const loc = await storage.getLocale();
+      if (loc) setLocale(loc);
+    })();
+  }, []);
+
+  const t = translations[locale];
+  const storeName = Platform.OS === 'ios' ? 'Apple App Store' : 'Google Play Store';
+
+  const handleSubscribe = () => {
+    // TODO: integrate with expo-in-app-purchases or react-native-purchases
+    Alert.alert('Coming Soon', 'In-app purchases will be available soon.');
+  };
+
+  const handleRestore = () => {
+    Alert.alert('Restore', 'Checking for existing purchases...');
+  };
+
   return (
-    <div className="min-h-screen bg-background-dark flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-500">
-      <div className="flex items-center justify-end p-4">
-        <button 
-          onClick={onClose}
-          className="size-12 rounded-full bg-white/10 flex items-center justify-center text-white"
-        >
-          <span className="material-symbols-outlined">close</span>
-        </button>
-      </div>
+    <LinearGradient colors={['#0a0202', '#1a0808']} style={styles.container}>
+      {/* Top bar */}
+      <View style={styles.topBar}>
+        <Pressable onPress={onClose} style={styles.backBtn}>
+          <Icon name="arrow_back" size={24} color="rgba(255,255,255,0.7)" />
+        </Pressable>
+      </View>
 
-      <div className="px-4">
-        <div 
-          className="w-full h-56 bg-cover bg-center rounded-2xl"
-          style={{ backgroundImage: `url(https://lh3.googleusercontent.com/aida-public/AB6AXuDhVWUl89m84hBCrLXrNk9rJJK1iCX5imObbHgffCEbPTqWA5sUtRtt4ng-PeAytr8curGxsvBxFauttpJQGg7jZIn-ESeyt6DJtO40EDkTet5oaBwyi-tY_0CaIeBwmTnCyhdZIJY8GXJnlBvKU5sILQWPTTuv18rHQ6nWcPv1jwoKuuCR5OpwGXhyIVDRAt9_ISEaWXvYuatUczqZ4PGVAHdulERBZ5_4BC2uQVaMGmH2CgjLJV4sKAi80DLdKHUUisBqgatBo53R)` }}
-        />
-        
-        <h1 className="text-white text-[32px] font-bold text-center mt-6">Unlock Premium Profile</h1>
-        <p className="text-white/70 text-center text-sm mb-8 px-4">Experience the cosmos without limits</p>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconCircle}>
+            <Icon name="auto_awesome" size={32} color={colors.accentGold} />
+          </View>
+          <Text style={styles.title}>{t.premiumTitle}</Text>
+          <Text style={styles.subtitle}>{t.premiumSubtitle}</Text>
+        </View>
 
-        <div className="space-y-4 mb-10">
-          {[
-            { icon: 'auto_awesome', label: 'Birth personalization' },
-            { icon: 'insights', label: 'Detailed insights' },
-            { icon: 'calendar_month', label: 'Yearly reading' },
-            { icon: 'block', label: 'Ad-free experience' }
-          ].map((feat, i) => (
-            <div key={i} className="flex items-center gap-4 px-2">
-              <div className="size-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                <span className="material-symbols-outlined">{feat.icon}</span>
-              </div>
-              <p className="text-white font-medium flex-1">{feat.label}</p>
-            </div>
-          ))}
-        </div>
+        {isPremium ? (
+          <View style={styles.activeCard}>
+            <Icon name="verified" size={48} color={colors.accentGold} />
+            <Text style={styles.activeTitle}>{t.premiumActive}</Text>
+            <Text style={styles.activeDesc}>{t.premiumActiveDesc}</Text>
+          </View>
+        ) : (
+          <>
+            {/* Features */}
+            <View style={styles.featuresCard}>
+              {features.map((feat, i) => (
+                <View key={i} style={styles.featureRow}>
+                  <View style={styles.featureCheck}>
+                    <Icon name="check" size={16} color={colors.accentGold} />
+                  </View>
+                  <Text style={styles.featureText}>{t[feat.key]}</Text>
+                </View>
+              ))}
+            </View>
 
-        <div className="space-y-4">
-          <div className="relative p-5 rounded-2xl border-2 border-primary bg-primary/10 flex justify-between items-center">
-            <div className="absolute -top-3 right-4 bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
-              Best Value - Save 40%
-            </div>
-            <div>
-              <p className="text-white font-bold text-lg">Yearly</p>
-              <p className="text-white/60 text-sm">$49.99 / year</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white font-bold text-xl">$4.16</p>
-              <p className="text-white/60 text-sm">/mo</p>
-            </div>
-          </div>
+            {/* Pricing card */}
+            <View style={styles.pricingCard}>
+              <Text style={styles.pricingLabel}>{t.premiumMonthly}</Text>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceAmount}>{t.premiumPrice}</Text>
+                <Text style={styles.priceUnit}>{t.premiumPerMonth}</Text>
+              </View>
+              <Text style={styles.cancellable}>{t.premiumCancellable}</Text>
+            </View>
 
-          <div className="p-5 rounded-2xl border border-white/10 bg-white/5 flex justify-between items-center">
-            <div>
-              <p className="text-white font-bold text-lg">Monthly</p>
-              <p className="text-white/60 text-sm">Cancel anytime</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white font-bold text-xl">$6.99</p>
-              <p className="text-white/60 text-sm">/mo</p>
-            </div>
-          </div>
-        </div>
+            {/* CTA */}
+            <Pressable onPress={handleSubscribe}>
+              <LinearGradient
+                colors={[colors.accentGold, '#d4a017']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.ctaBtn}
+              >
+                <Text style={styles.ctaText}>{t.premiumCta}</Text>
+              </LinearGradient>
+            </Pressable>
 
-        <div className="mt-8 flex flex-col gap-4 pb-12">
-          <button className="w-full bg-primary py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20">
-            Start Premium
-          </button>
-          <button className="text-white/50 text-sm font-medium hover:text-white/80 transition-colors">
-            Restore purchase
-          </button>
-          <p className="text-[10px] text-white/30 text-center px-4 leading-relaxed">
-            Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
-          </p>
-        </div>
-      </div>
-    </div>
+            {/* Restore */}
+            <Pressable onPress={handleRestore} style={styles.restoreBtn}>
+              <Text style={styles.restoreText}>{t.premiumRestore}</Text>
+            </Pressable>
+
+            {/* Footer notes */}
+            <View style={styles.footerNotes}>
+              <Text style={styles.noteText}>{t.premiumStoreNote} {storeName}</Text>
+              <Text style={styles.noteText}>{t.premiumLocalPrice}</Text>
+              <Text style={[styles.noteText, { marginTop: 8 }]}>{t.premiumRenewalNote}</Text>
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </LinearGradient>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  topBar: { padding: 24 },
+  backBtn: { width: 48, height: 48, borderRadius: 24, ...glassPanel, alignItems: 'center', justifyContent: 'center' },
+  scrollContent: { paddingHorizontal: 32, paddingBottom: 64 },
+  header: { alignItems: 'center', marginBottom: 32 },
+  iconCircle: { width: 80, height: 80, borderRadius: 40, ...glassPanel, borderColor: 'rgba(243,198,35,0.3)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  title: { color: '#fff', fontSize: 28, fontWeight: 'bold', fontStyle: 'italic', marginBottom: 8 },
+  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center' },
+  activeCard: { ...glassPanel, borderColor: 'rgba(243,198,35,0.3)', borderRadius: 24, padding: 32, alignItems: 'center', gap: 12 },
+  activeTitle: { color: colors.accentGold, fontSize: 20, fontWeight: 'bold' },
+  activeDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
+  featuresCard: { ...glassPanel, borderRadius: 20, padding: 24, gap: 16, marginBottom: 24 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  featureCheck: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(243,198,35,0.1)', alignItems: 'center', justifyContent: 'center' },
+  featureText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, flex: 1 },
+  pricingCard: { ...glassPanel, borderColor: 'rgba(243,198,35,0.2)', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 24 },
+  pricingLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  priceAmount: { color: colors.accentGold, fontSize: 36, fontWeight: 'bold', fontStyle: 'italic' },
+  priceUnit: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
+  cancellable: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 8 },
+  ctaBtn: { height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 8, marginBottom: 16 },
+  ctaText: { color: '#0a0202', fontSize: 16, fontWeight: 'bold' },
+  restoreBtn: { alignItems: 'center', paddingVertical: 12 },
+  restoreText: { color: 'rgba(255,255,255,0.3)', fontSize: 12, textDecorationLine: 'underline' },
+  footerNotes: { marginTop: 24, alignItems: 'center', gap: 4 },
+  noteText: { color: 'rgba(255,255,255,0.2)', fontSize: 9, textAlign: 'center', letterSpacing: 1 },
+});
 
 export default PremiumScreen;

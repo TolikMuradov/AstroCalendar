@@ -1,133 +1,132 @@
-
-import React, { useState } from 'react';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../services/firebase';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '../services/firebase';
+import Icon from '../components/Icon';
+import CosmicLoader from '../components/CosmicLoader';
+import { colors, glassPanel } from '../styles/theme';
+import Constants from 'expo-constants';
 
 interface SignInProps {
   onBack: () => void;
-  onSignIn: (userData?: { name: string; email: string }) => void;
 }
 
-const SignInScreen: React.FC<SignInProps> = ({ onBack, onSignIn }) => {
+const SignInScreen: React.FC<SignInProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const webClientId = Constants.expoConfig?.extra?.googleWebClientId || '';
+
+  useEffect(() => {
+    if (webClientId) {
+      GoogleSignin.configure({
+        webClientId,
+        offlineAccess: false,
+      });
+    }
+  }, [webClientId]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      onSignIn({
-        name: user.displayName || 'Traveler',
-        email: user.email || ''
-      });
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+
+      if (idToken) {
+        const credential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(auth, credential);
+      } else {
+        throw new Error('No ID token returned from Google.');
+      }
     } catch (err: any) {
-      console.error("Auth Error:", err);
-      setError("Celestial connection interrupted. Please try again.");
+      console.error('Auth Error:', err);
+      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+        setError('Sign-in cancelled.');
+      } else if (err.code === statusCodes.IN_PROGRESS) {
+        setError('Sign-in already in progress.');
+      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Play services not available or outdated.');
+      } else {
+        setError('Celestial connection interrupted. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-x-hidden bg-background-dark animate-fade-in">
-      <div className="absolute top-1/4 right-0 w-64 h-64 bg-primary nebula-glow rounded-full"></div>
-      
-      <div className="flex items-center p-6 justify-between z-10">
-        <button className="size-12 rounded-full glass-panel flex items-center justify-center text-white/70 hover:text-white" onClick={onBack}>
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-      </div>
+    <LinearGradient colors={['#0a0202', '#1a0808']} style={styles.container}>
+      {/* Back button */}
+      <View style={styles.topBar}>
+        <Pressable onPress={onBack} style={styles.backBtn}>
+          <Icon name="arrow_back" size={24} color="rgba(255,255,255,0.7)" />
+        </Pressable>
+      </View>
 
-      <div className="flex flex-col flex-1 justify-center px-8 z-10">
-        <div className="text-center mb-12">
-          <div className="inline-flex size-24 rounded-full glass-panel border border-white/10 items-center justify-center mb-8 animate-float shadow-inner shadow-white/5">
-            <span className="material-symbols-outlined text-primary text-[48px] drop-shadow-[0_0_10px_rgba(138,43,226,0.6)]">auto_awesome</span>
-          </div>
-          <h1 className="text-white text-4xl font-serif italic font-bold mb-4 tracking-tight leading-tight">Sync your soul.</h1>
-          <p className="text-white/40 text-sm max-w-[280px] mx-auto leading-relaxed">Securely access your personal natal chart and daily cosmic insights.</p>
-        </div>
+      {/* Content */}
+      <View style={styles.content}>
+        <View style={styles.center}>
+          <View style={styles.iconCircle}>
+            <Icon name="auto_awesome" size={48} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>Sync your soul.</Text>
+          <Text style={styles.subtitle}>Securely access your personal natal chart and daily cosmic insights.</Text>
+        </View>
 
         {error && (
-          <div className="mb-6 animate-fade-in">
-            <div className="glass-panel border-red-500/20 bg-red-500/5 p-4 rounded-2xl text-center">
-              <p className="text-red-400 text-xs font-medium">{error}</p>
-            </div>
-          </div>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
         )}
 
-        <div className="flex flex-col gap-3">
-          {/* Google */}
-          <button 
-            disabled={isLoading}
-            onClick={handleGoogleSignIn}
-            className={`group flex items-center justify-center gap-3 rounded-2xl h-14 glass-panel border border-white/5 transition-all duration-300 ${isLoading ? 'opacity-50 cursor-wait' : 'hover:bg-white/5 hover:border-white/20 hover:scale-[1.02] active:scale-[0.98]'}`}
-          >
-            {isLoading ? (
-              <div className="animate-spin h-5 w-5 border-2 border-white/20 border-t-white rounded-full"></div>
-            ) : (
-              <>
-                <svg className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all duration-300" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                <span className="text-white/60 group-hover:text-white text-sm font-medium tracking-tight transition-colors">Continue with Google</span>
-              </>
-            )}
-          </button>
+        <Pressable
+          disabled={isLoading}
+          onPress={handleGoogleSignIn}
+          style={[styles.googleBtn, isLoading && { opacity: 0.5 }]}
+        >
+          {isLoading ? (
+            <CosmicLoader size="small" color="#fff" />
+          ) : (
+            <>
+              <Text style={{ fontSize: 20 }}>G</Text>
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </>
+          )}
+        </Pressable>
 
-          {/* Apple */}
-          <button 
-            disabled
-            className="group flex items-center justify-center gap-3 rounded-2xl h-14 glass-panel border border-white/5 cursor-not-allowed opacity-50"
-          >
-            <svg className="w-5 h-5 fill-white/30" viewBox="0 0 24 24">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-            </svg>
-            <span className="text-white/30 text-sm font-medium tracking-tight">Continue with Apple</span>
-          </button>
+        <View style={styles.securityRow}>
+          <Icon name="verified_user" size={16} color="rgba(243,198,35,0.4)" />
+          <Text style={styles.securityText}>End-to-End Soul Encryption</Text>
+        </View>
 
-          {/* Facebook */}
-          <button 
-            disabled
-            className="group flex items-center justify-center gap-3 rounded-2xl h-14 glass-panel border border-white/5 cursor-not-allowed opacity-50"
-          >
-            <svg className="w-5 h-5 fill-white/30" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            <span className="text-white/30 text-sm font-medium tracking-tight">Continue with Facebook</span>
-          </button>
-        </div>
-
-        <p className="text-center text-white/30 text-xs mt-6">
-          Choose your cosmic gateway
-        </p>
-
-        <div className="mt-8 text-center">
-          <button 
-            onClick={() => onSignIn()}
-            className="text-white/40 text-sm font-medium hover:text-white/80 transition-colors border-b border-white/5 pb-0.5 hover:border-white/20"
-          >
-            Continue as a seeker (Guest)
-          </button>
-          
-          <div className="mt-12 flex items-center justify-center gap-3">
-             <span className="material-symbols-outlined text-[16px] text-accent-gold/40">verified_user</span>
-             <p className="text-white/20 text-[10px] uppercase font-bold tracking-[0.2em]">End-to-End Soul Encryption</p>
-          </div>
-
-          <div className="mt-8">
-             <p className="text-white/20 text-[9px] uppercase tracking-[0.25em]">
-               Powered by <span className="text-accent-gold/50 font-bold">916.studio</span>
-             </p>
-          </div>
-        </div>
-      </div>
-    </div>
+        <Text style={styles.poweredText}>
+          Powered by <Text style={{ color: 'rgba(243,198,35,0.5)', fontWeight: 'bold' }}>916.studio</Text>
+        </Text>
+      </View>
+    </LinearGradient>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  topBar: { flexDirection: 'row', padding: 24 },
+  backBtn: { width: 48, height: 48, borderRadius: 24, ...glassPanel, alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 32, gap: 24 },
+  center: { alignItems: 'center', marginBottom: 32 },
+  iconCircle: { width: 96, height: 96, borderRadius: 48, ...glassPanel, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  title: { color: '#fff', fontSize: 36, fontWeight: 'bold', fontStyle: 'italic', marginBottom: 16, textAlign: 'center' },
+  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center', maxWidth: 280, lineHeight: 22 },
+  errorBox: { ...glassPanel, backgroundColor: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)', borderRadius: 16, padding: 16, alignItems: 'center' },
+  errorText: { color: '#f87171', fontSize: 12, fontWeight: '500' },
+  googleBtn: { ...glassPanel, height: 56, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  googleBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '500' },
+  securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 24 },
+  securityText: { color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2 },
+  poweredText: { color: 'rgba(255,255,255,0.2)', fontSize: 9, textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center', marginTop: 16 },
+});
 
 export default SignInScreen;

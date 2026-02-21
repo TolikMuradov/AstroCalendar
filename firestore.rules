@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection
+    match /users/{userId} {
+
+      // Anyone authenticated can read their OWN document
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Allow profile writes (name, birthDate, etc.) only by the owner
+      // Coins and reward fields can ONLY be modified by Cloud Functions (admin SDK)
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['coins', 'reward'])
+                       || resource == null);
+      // Note: When resource == null (new doc), we allow setting initial coins/reward
+      // After that, only Cloud Functions can modify coins/reward fields
+    }
+  }
+}

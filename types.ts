@@ -1,5 +1,5 @@
 
-export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'PROFILE' | 'PREMIUM' | 'COMPARE';
+export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE';
 
 export type Locale = 'en' | 'tr' | 'th';
 
@@ -63,6 +63,36 @@ export interface ComparisonResult {
   summary: string;
   strengths: string[];
   challenges: string[];
+}
+
+// Coin System Types
+export interface RewardInfo {
+  lastRewardDate: string; // ISO date, e.g. "2026-02-11"
+  rewardCountToday: number; // coins earned today, default 0
+}
+
+export interface CoinData {
+  coins: number;
+  reward: RewardInfo;
+}
+
+export const DAILY_REWARD_LIMIT = 3; // max ad rewards per day
+export const COINS_PER_AD = 1; // coins earned per rewarded ad
+export const LUCKY_LOCKED_COST = 1; // coins to unlock a locked lucky number
+export const TAROT_READING_COST = 6; // coins for a tarot reading (free users)
+
+// Tarot Reading Types
+export interface TarotReading {
+  id: string; // unique reading ID
+  cardId: number; // drawn card ID from deck
+  cardName: string; // card name in user's locale
+  isReversed: boolean; // upright or reversed
+  interpretation: string; // AI-generated interpretation
+  guidance: string; // AI-generated guidance/advice
+  affirmation: string; // AI-generated affirmation
+  date: string; // ISO date
+  locale: Locale;
+  generatedAt: string;
 }
 
 // Monthly Calendar Spiritual Insights (1 AI request per month per user)
