@@ -23,6 +23,7 @@ const SignInScreen: React.FC<SignInProps> = ({ onBack }) => {
     if (webClientId) {
       GoogleSignin.configure({
         webClientId,
+        iosClientId: Constants.expoConfig?.extra?.googleIosUrlScheme?.replace('com.googleusercontent.apps.', '') + '.apps.googleusercontent.com' || '',
         offlineAccess: false,
       });
     }
@@ -32,9 +33,13 @@ const SignInScreen: React.FC<SignInProps> = ({ onBack }) => {
     setIsLoading(true);
     setError(null);
     try {
+      console.log('webClientId configured:', webClientId);
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+      console.log('userInfo:', JSON.stringify(userInfo, null, 2));
+
+      // The new @react-native-google-signin/google-signin returns token directly in data object
+      const idToken = userInfo?.data?.idToken;
 
       if (idToken) {
         const credential = GoogleAuthProvider.credential(idToken);

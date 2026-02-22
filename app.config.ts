@@ -30,6 +30,7 @@ export default ({ config }: any) => ({
     admobRewardedId: process.env.VITE_ADMOB_APP_REWARDED_ID,
     cloudFunctions: process.env.VITE_CLOUD_FUNCTIONS,
     googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+    googleIosUrlScheme: process.env.GOOGLE_IOS_URL_SCHEME,
     eas: {
       projectId: 'a979dcdf-1e08-4289-81ca-0cd4b2c70be0',
     },
@@ -42,7 +43,12 @@ export default ({ config }: any) => ({
         iosAppId: 'ca-app-pub-5521590521676349~4769244660',
       },
     ],
-    '@react-native-google-signin/google-signin'
+    [
+      '@react-native-google-signin/google-signin',
+      {
+        iosUrlScheme: process.env.GOOGLE_IOS_URL_SCHEME,
+      }
+    ]
   ],
   updates: {
     url: 'https://u.expo.dev/a979dcdf-1e08-4289-81ca-0cd4b2c70be0',
