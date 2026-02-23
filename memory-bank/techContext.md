@@ -3,9 +3,9 @@
 ## Technology Stack
 
 ### Core Technologies (Migrated to Expo/React Native — Feb 21, 2026)
-- **Expo SDK**: 52.0.49 (managed workflow)
-- **React Native**: 0.76.5
-- **React**: 19.0.0
+- **Expo SDK**: 54.0.33 (managed workflow)
+- **React Native**: 0.81.5
+- **React**: 19.1.0
 - **TypeScript**: 5.8.2 (strict typing)
 - **NativeWind**: v2 (Tailwind CSS for React Native via babel plugin)
 - **Metro**: Bundler (replaces Vite)
@@ -77,7 +77,11 @@ AstroCalendar/
 │   ├── Onboarding.tsx       # TextInput + Picker components
 │   ├── Dashboard.tsx        # Main hub (~300 lines), energy, lucky locks, coins
 │   ├── Calendar.tsx         # Monthly grid, day types, stone/activity details
-│   ├── Tarot.tsx            # 5-phase flow, Animated flip, coin gating
+│   ├── Tarot.tsx            # Spread selection hub, daily card, coin gating, done badges
+│   ├── PastPresentFuture.tsx # PPF spread — 2-stage, per-card GPT, 3D preview
+│   ├── YouThemEnergy.tsx    # YTE spread — relationship reading, name+type input, 3D preview
+│   ├── DailyCard.tsx        # Daily free tarot card with AI interpretation
+│   ├── EmptyReading.tsx     # Placeholder for unimplemented spreads
 │   ├── Profile.tsx          # Edit mode, Picker, language, logout
 │   ├── Premium.tsx          # Feature list, $1.99/month CTA
 │   └── Compare.tsx          # Partner input, harmony score

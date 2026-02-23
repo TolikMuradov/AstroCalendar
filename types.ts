@@ -1,7 +1,6 @@
+export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE' | 'EMPTY_READING' | 'DAILY_CARD' | 'PAST_PRESENT_FUTURE' | 'YOU_THEM_ENERGY';
 
-export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE';
-
-export type Locale = 'en' | 'tr' | 'th';
+export type Locale = 'en' | 'tr' | 'th' | 'es' | 'fr' | 'de' | 'ja';
 
 export interface UserProfile {
   uid: string;
@@ -76,10 +75,11 @@ export interface CoinData {
   reward: RewardInfo;
 }
 
-export const DAILY_REWARD_LIMIT = 3; // max ad rewards per day
+export const DAILY_REWARD_LIMIT = 10; // max ad rewards per day
 export const COINS_PER_AD = 1; // coins earned per rewarded ad
 export const LUCKY_LOCKED_COST = 1; // coins to unlock a locked lucky number
-export const TAROT_READING_COST = 6; // coins for a tarot reading (free users)
+export const TAROT_READING_COST = 0; // Daily card is free
+export const TAROT_SPREAD_COST = 10; // Specialized spreads cost 10 coins
 
 // Tarot Reading Types
 export interface TarotReading {
@@ -91,6 +91,63 @@ export interface TarotReading {
   guidance: string; // AI-generated guidance/advice
   affirmation: string; // AI-generated affirmation
   date: string; // ISO date
+  locale: Locale;
+  generatedAt: string;
+}
+
+export interface DailyTarotReading {
+  id: string; // unique reading ID
+  cardId: number; // drawn card ID
+  cardName: string; // card name in user locale
+  isReversed: boolean;
+  overallEnergy: string;
+  emotionalTone: string;
+  subtleAdvice: string;
+  date: string; // ISO date
+  locale: Locale;
+  generatedAt: string;
+}
+
+export interface PPFCardData {
+  id: number;
+  name: string;
+  isReversed: boolean;
+  keywords: string[];
+  cardMeaning: string;
+  personalInterpretation: string;
+}
+
+export interface PastPresentFutureReading {
+  id: string;
+  category: string;
+  readingContext?: string;
+  pastCard: PPFCardData;
+  presentCard: PPFCardData;
+  futureCard: PPFCardData;
+  finalIntegration: string;
+  date: string;
+  locale: Locale;
+  generatedAt: string;
+}
+
+export interface YTECardData {
+  id: number;
+  name: string;
+  isReversed: boolean;
+  keywords: string[];
+  cardMeaning: string;
+  personalInterpretation: string;
+}
+
+export interface YouThemEnergyReading {
+  id: string;
+  personName: string;
+  relationship: string;
+  youCard: YTECardData;
+  themCard: YTECardData;
+  energyCard: YTECardData;
+  finalIntegration: string;
+  date: string;
   locale: Locale;
   generatedAt: string;
 }

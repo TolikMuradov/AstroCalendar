@@ -74,6 +74,21 @@ All screens follow consistent prop patterns:
 - **RewardedAdModal**: `{ isOpen: boolean, onClose: () => void, onCoinUpdate: (balance: CoinBalance) => void, rewardCountToday: number }`
 - **Icon**: `{ name: string, size?: number, color?: string }`
 
+### Tarot Spread Pattern
+All card-based tarot spreads follow the same architecture:
+1. **2-stage flow**: SETUP (user input) → READING (cards + interpretations)
+2. **Sequential card flip**: Each card flipped one at a time, per-card GPT call immediately after flip
+3. **Animated flip**: `Animated.timing` for opacity crossfade (back→front), haptic feedback
+4. **3D card preview**: Tapping revealed card opens fullscreen Modal with `Animated.spring` scale + `Animated.timing` rotateY
+5. **Final integration**: After all 3 cards revealed, one closing GPT message tying everything together
+6. **Same-day cache**: Reading saved to AsyncStorage with date key, restored on revisit
+7. **Daily limit**: Each spread usable once per day, tracked via `getTodaySpreadStatus()`
+8. **Coin gating**: 10 coins per spread (free for premium users)
+9. **GPT tone**: Fortune-teller voice — warm, direct, sometimes blunt, natural speech
+
+**Implemented spreads**: PPF (PastPresentFuture.tsx), YTE (YouThemEnergy.tsx)
+**Remaining spreads**: Love Reading, Career & Money, Shadow Energy, Let Fate Choose
+
 ### RN Component Mapping (from Web)
 | Web | React Native |
 |-----|-------------|

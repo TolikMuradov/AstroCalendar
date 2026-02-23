@@ -1,9 +1,36 @@
 # Active Context
 
-## Current State (Updated Feb 21, 2026 - Session 3)
-The project has been **fully migrated from Vite+React web to Expo+React Native**. All 10 screens, 4 components, 6 services, and infrastructure converted. TypeScript compiles with **0 errors** (`npx tsc --noEmit`). Real Google AdMob integrated via `react-native-google-mobile-ads`.
+## Current State (Updated Feb 23, 2026 - Session 8)
+The project is a fully migrated Expo/React Native app with native Android builds working. Latest work: **"You – Them – Energy" (☯️) tarot spread** fully implemented, plus AI tone fix, daily limit system, and 3D card preview modal.
 
-## Recent Changes (Latest - Feb 21, 2026, Session 3)
+## Recent Changes (Latest - Feb 23, 2026, Session 8)
+
+### You – Them – Energy Spread (Complete)
+Full 3-card relationship tarot reading — mirrors PPF architecture:
+- **types.ts**: Added `YOU_THEM_ENERGY` to Screen type (now 14 values). New `YTECardData` + `YouThemEnergyReading` interfaces (personName, relationship, youCard/themCard/energyCard)
+- **geminiService.ts**: Added `generateYTECardInterpretation()` (relationship-focused fortune-teller prompts, position-aware: You/Them/Energy Between) + `generateYTEFinalIntegration()` (closing reflection on connection)
+- **storage.ts**: Added `getYouThemEnergyReading()` / `saveYouThemEnergyReading()`. Updated `getTodaySpreadStatus()` to check YTE specifically
+- **screens/YouThemEnergy.tsx**: New screen — 2-stage flow (SETUP → READING). Stage 1: name input + relationship type (Partner/Crush/Ex/Friend/Family/Colleague). Stage 2: 3 cards with sequential flip, per-card GPT, final integration, 3D preview modal, same-day cache, 10-coin cost
+- **translations.ts**: 22 new YTE keys added to all 7 locales (en/tr/th/es/fr/de/ja)
+- **App.tsx**: Import + case for `YOU_THEM_ENERGY`
+- **Tarot.tsx**: Routes `you_them_energy` to new screen instead of `EMPTY_READING`
+- **Zero TypeScript errors** across all files
+
+### AI Tone Fix (Session 7)
+- GPT prompts rewritten from "calm, refined tarot reader" / "Educational, neutral tone" to "experienced fortune teller who reads tarot for a living" — warm, direct, sometimes blunt, honest. Uses phrases like "Look...", "Here's the thing...", "I won't sugarcoat this..."
+
+### Daily Limit System (Session 7)
+- All tarot readings (free + paid) limited to 1x/day per spread type
+- `storage.ts`: `getSpreadReading()`, `saveSpreadReading()`, `getTodaySpreadStatus()` — generic spread caching
+- `Tarot.tsx`: `spreadStatus` state tracks done spreads. Done spreads show ✓ badge + 50% opacity, still tappable to view cached result
+
+### 3D Card Preview Modal (Session 7)
+- In PPF + YTE screens: tapping a revealed card opens fullscreen 3D preview
+- `Animated.spring` scale (0.3→1) + `Animated.timing` rotateY (-90°→0°) + backdrop fade
+- Golden glow border, card name + position label below
+- Tap backdrop to close (reverse animation)
+
+### Previous Changes (Feb 21-23, Sessions 3-6)
 
 ### Full Expo/React Native Migration (Complete)
 **Reason**: User requested Google AdMob integration using `react-native-google-mobile-ads`, which requires native builds. Chose full Expo/RN conversion over web-only approach.
@@ -73,9 +100,9 @@ The project has been **fully migrated from Vite+React web to Expo+React Native**
 - Storage: Firestore (server-side), AsyncStorage for daily unlock state
 
 ## Next Steps
-1. **Configure Google OAuth client IDs** in `app.config.ts` extra section (required for SignIn)
-2. **Run `npx expo prebuild`** to generate native `android/` and `ios/` directories
-3. **Run `npx expo run:android`** for first native build and test
+1. **Build remaining spreads**: Love Reading (❤️), Career & Money (💼), Shadow Energy (🌑), Let Fate Choose (✨) — currently route to EMPTY_READING
+2. **Test YTE + PPF flows end-to-end** on Android emulator — verify card flips, GPT calls, daily caching, 3D preview
+3. **Configure Google OAuth client IDs** in `app.config.ts` extra section (required for SignIn)
 4. **Deploy Cloud Functions** with updated limit (`cd functions && npm run build && firebase deploy --only functions`)
 5. **Implement real in-app purchases** in Premium screen (currently placeholder Alert)
 6. **Push Notifications** for daily reminders

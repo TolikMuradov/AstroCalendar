@@ -18,6 +18,32 @@ import { colors, glassPanel } from '../styles/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+const COLOR_MAP: Record<string, string> = {
+  red: '#e53e3e', crimson: '#dc143c', scarlet: '#ff2400',
+  blue: '#4299e1', 'navy blue': '#001f5b', 'royal blue': '#4169e1', 'sky blue': '#87ceeb', 'sapphire blue': '#0f52ba', 'light blue': '#add8e6', 'dark blue': '#00008b', cobalt: '#0047ab',
+  green: '#48bb78', 'emerald green': '#50c878', 'forest green': '#228b22', 'olive green': '#808000', 'lime green': '#32cd32', mint: '#3eb489', 'mint green': '#98fb98', sage: '#87ae73', teal: '#008080', emerald: '#50c878',
+  yellow: '#ecc94b', gold: '#ffd700', golden: '#ffd700', amber: '#ffbf00', mustard: '#e1ad01',
+  orange: '#ed8936', tangerine: '#ff9966', coral: '#ff7f50', peach: '#ffcba4',
+  purple: '#9f7aea', violet: '#8b5cf6', 'royal purple': '#7851a9', lavender: '#b794f4', plum: '#8e4585', mauve: '#e0b0ff', lilac: '#c8a2c8', magenta: '#ff00ff', indigo: '#4b0082',
+  pink: '#ed64a6', rose: '#ff007f', 'hot pink': '#ff69b4', blush: '#de5d83', salmon: '#fa8072', fuchsia: '#ff00ff',
+  white: '#f7fafc', ivory: '#fffff0', cream: '#fffdd0', pearl: '#eae0c8',
+  black: '#1a202c', charcoal: '#36454f', onyx: '#353839',
+  gray: '#a0aec0', grey: '#a0aec0', silver: '#c0c0c0', 'slate gray': '#708090',
+  brown: '#8b4513', chocolate: '#7b3f00', copper: '#b87333', bronze: '#cd7f32', maroon: '#800000', burgundy: '#800020',
+  turquoise: '#40e0d0', aqua: '#00ffff', cyan: '#00ffff', aquamarine: '#7fffd4',
+  beige: '#f5f5dc', taupe: '#483c32', khaki: '#c3b091',
+  ruby: '#e0115f', sapphire: '#0f52ba', topaz: '#ffc87c',
+};
+
+function getColorHex(colorName: string): string {
+  const lower = colorName.toLowerCase().trim();
+  if (COLOR_MAP[lower]) return COLOR_MAP[lower];
+  for (const [key, val] of Object.entries(COLOR_MAP)) {
+    if (lower.includes(key) || key.includes(lower)) return val;
+  }
+  return '#f3c623';
+}
+
 interface DashboardProps {
   profile: UserProfile;
   navigate: (screen: Screen) => void;
@@ -66,18 +92,22 @@ const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
 
   useEffect(() => {
     loadInsight();
-    loadCoins();
     loadUnlocks();
-  }, []);
 
-  const loadCoins = async () => {
-    try {
-      const bal = await coinService.getBalance();
-      setCoinBalance(bal);
-    } catch { }
-    // Realtime subscribe
-    return coinService.subscribe((bal) => setCoinBalance(bal));
-  };
+    let unsubCoins: any = null;
+    const initCoins = async () => {
+      try {
+        const bal = await coinService.getBalance();
+        setCoinBalance(bal);
+      } catch { }
+      unsubCoins = coinService.subscribe((bal) => setCoinBalance(bal));
+    };
+    initCoins();
+
+    return () => {
+      if (unsubCoins) unsubCoins();
+    };
+  }, []);
 
   const loadUnlocks = async () => {
     const unlocks = await getLuckyUnlocksForToday(profile.uid);
@@ -222,25 +252,32 @@ const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
 
                 <Animated.View style={{
                   width: 100, height: 100, borderRadius: 50,
-                  backgroundColor: 'rgba(243,198,35,0.15)',
+                  backgroundColor: getColorHex(insight.color) + '30',
                   alignItems: 'center', justifyContent: 'center',
-                  borderColor: 'rgba(243,198,35,0.5)', borderWidth: 2,
+                  borderColor: getColorHex(insight.color),
+                  borderWidth: 2.5,
                   // Pulsing scale
                   transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.05] }) }],
                   // Neon glow effect using shadow
-                  shadowColor: colors.accentGold,
+                  shadowColor: getColorHex(insight.color),
                   shadowOffset: { width: 0, height: 0 },
                   shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
                   shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 25] }),
                   elevation: 10
                 }}>
-                  <Text style={{
-                    color: '#fff', fontSize: 14, fontWeight: 'bold', fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 4,
-                    textShadowColor: colors.accentGold, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10
-                  }}>
-                    {insight.color}
-                  </Text>
+                  <View style={{
+                    width: 48, height: 48, borderRadius: 24, backgroundColor: getColorHex(insight.color),
+                    shadowColor: getColorHex(insight.color), shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 12, elevation: 6,
+                  }} />
                 </Animated.View>
+
+                <Text style={{
+                  color: '#fff', fontSize: 14, fontWeight: '600', fontStyle: 'italic', textAlign: 'center',
+                  marginTop: 10,
+                  textShadowColor: getColorHex(insight.color), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8
+                }}>
+                  {insight.color}
+                </Text>
               </View>
             </View>
 

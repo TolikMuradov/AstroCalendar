@@ -11,6 +11,8 @@ export default ({ config }: any) => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
   splash: {
+    image: './assets/splash.png',
+    resizeMode: 'contain',
     backgroundColor: '#0A0118',
   },
   ios: {
@@ -19,12 +21,14 @@ export default ({ config }: any) => ({
   },
   android: {
     adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#0A0118',
     },
     package: 'com.studio916.astrocalendar',
   },
   extra: {
     openaiApiKey: process.env.VITE_OPENAI_API_KEY,
+    groqApiKey: process.env.VITE_GROQ_API_KEY,
     admobAppId: process.env.VITE_ADMOB_APP_ID,
     admobAppOpenId: process.env.VITE_ADMOB_APP_OPEN_ID,
     admobRewardedId: process.env.VITE_ADMOB_APP_REWARDED_ID,

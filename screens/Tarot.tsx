@@ -1,415 +1,264 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Animated, Dimensions, ImageBackground, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { UserProfile, TarotReading, Screen, TAROT_READING_COST } from '../types';
-import { storage } from '../services/storage';
+import { UserProfile, Screen } from '../types';
 import { coinService, CoinBalance } from '../services/coinService';
-import { generateTarotReading } from '../services/geminiService';
-import { TAROT_DECK, TarotCard, getCardName as getCardNameFromDeck } from '../utils/tarotDeck';
+import { storage } from '../services/storage';
 import { translations } from '../i18n/translations';
 import Icon from '../components/Icon';
 import Navigation from '../components/Navigation';
-import RewardedAdModal from '../components/RewardedAdModal';
-import CosmicLoader from '../components/CosmicLoader';
 import { colors, glassPanel } from '../styles/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-type Phase = 'idle' | 'shuffle' | 'reveal' | 'interpret' | 'complete';
 
 interface TarotProps {
   profile: UserProfile;
   navigate: (screen: Screen) => void;
 }
 
+const TarotCardItem = ({ title, price, icon, onPress, disabled, done }: { title: string, price: number, icon: string, onPress: () => void, disabled?: boolean, done?: boolean }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+  };
+
+  return (
+    <Animated.View style={[styles.cardItemContainer, { transform: [{ scale: scaleAnim }] }, done && { opacity: 0.5 }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.cardItemInner}
+      >
+        <View style={styles.cardIconBox}>
+          <Text style={{ fontSize: 32 }}>{icon}</Text>
+        </View>
+        <Text style={styles.cardItemTitle}>{title}</Text>
+        {done ? (
+          <View style={styles.doneBadge}>
+            <Text style={styles.doneBadgeText}>✓</Text>
+          </View>
+        ) : (
+          <View style={styles.cardItemPriceRow}>
+            <Text style={styles.cardItemPriceText}>🪙 {price}</Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+};
+
 const TarotScreen: React.FC<TarotProps> = ({ profile, navigate }) => {
-  const [locale, setLocale] = useState(profile.locale || 'en');
+  const locale = profile.locale || 'en';
   const t = translations[locale];
-
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [drawnCard, setDrawnCard] = useState<TarotCard | null>(null);
-  const [isReversed, setIsReversed] = useState(false);
-  const [reading, setReading] = useState<TarotReading | null>(null);
-  const [history, setHistory] = useState<TarotReading[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Coin state
-  const [coinBalance, setCoinBalance] = useState<CoinBalance>({ coins: 0, rewardCountToday: 0, dailyLimit: 3, canWatchAd: true });
-  const [showAdModal, setShowAdModal] = useState(false);
-  const [showCoinGate, setShowCoinGate] = useState(false);
-  const isPremium = profile.subscription?.isPremium;
-
-  // Animation
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [coinBalance, setCoinBalance] = useState<CoinBalance>({ coins: 0, rewardCountToday: 0, dailyLimit: 10, canWatchAd: true });
+  const [hasUsedDaily, setHasUsedDaily] = useState(false);
+  const [spreadStatus, setSpreadStatus] = useState<Record<string, boolean>>({});
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const shuffleAnim = useRef(new Animated.Value(0)).current;
-
-  // Start shuffle animation when phase changes
-  useEffect(() => {
-    if (phase === 'shuffle') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(shuffleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(shuffleAnim, { toValue: -1, duration: 600, useNativeDriver: true }),
-          Animated.timing(shuffleAnim, { toValue: 0, duration: 300, useNativeDriver: true })
-        ])
-      ).start();
-    } else {
-      shuffleAnim.stopAnimation();
-      shuffleAnim.setValue(0);
-    }
-  }, [phase]);
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    (async () => {
-      const loc = await storage.getLocale();
-      if (loc) setLocale(loc);
-      const hist = await storage.getTarotHistory(profile.uid);
-      setHistory(hist);
+    Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
 
-      // Check today's reading
-      const today = new Date().toISOString().split('T')[0];
-      const todayReading = await storage.getDailyTarotReading(profile.uid, today);
-      if (todayReading) {
-        const card = TAROT_DECK.find(c => c.id === todayReading.cardId);
-        if (card) {
-          setDrawnCard(card);
-          setIsReversed(todayReading.isReversed);
-          setReading(todayReading);
-          setPhase('complete');
-          flipAnim.setValue(1);
-          fadeAnim.setValue(1);
-        }
-      }
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: true })
+      ])
+    ).start();
 
+    let unsubCoins: any = null;
+    const loadData = async () => {
       try {
         const bal = await coinService.getBalance();
         setCoinBalance(bal);
       } catch { }
-    })();
+      unsubCoins = coinService.subscribe(setCoinBalance);
+    };
+    loadData();
+
+    const loadSpreadStatus = async () => {
+      const status = await storage.getTodaySpreadStatus(profile.uid);
+      setSpreadStatus(status);
+      setHasUsedDaily(!!status['daily']);
+    };
+    loadSpreadStatus();
+
+    return () => {
+      if (unsubCoins) unsubCoins();
+    };
   }, []);
 
-  const getCardName = (card: TarotCard): string => {
-    return getCardNameFromDeck(card, locale);
-  };
-
-  const handleDrawCard = async () => {
-    // Coin check for free users
-    if (!isPremium) {
-      try {
-        const bal = await coinService.getBalance();
-        setCoinBalance(bal);
-        if (bal.coins < TAROT_READING_COST) {
-          setShowCoinGate(true);
-          return;
-        }
-      } catch {
-        setShowCoinGate(true);
-        return;
-      }
+  const handleReadingPress = (type: string, cost: number) => {
+    if (type === 'daily') {
+      navigate('DAILY_CARD');
+      return;
+    }
+    if (type === 'past_present_future') {
+      // Always navigate — screen handles cache internally
+      navigate('PAST_PRESENT_FUTURE');
+      return;
+    }
+    if (type === 'you_them_energy') {
+      navigate('YOU_THEM_ENERGY');
+      return;
     }
 
-    setError(null);
-    setPhase('shuffle');
-
-    // Shuffle animation (wait 2s)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Draw random card
-    const card = TAROT_DECK[Math.floor(Math.random() * TAROT_DECK.length)];
-    const reversed = Math.random() > 0.5;
-    setDrawnCard(card);
-    setIsReversed(reversed);
-
-    // Reveal with flip animation
-    setPhase('reveal');
-    flipAnim.setValue(0);
-    Animated.timing(flipAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
-
-    // Spend coins (free users)
-    if (!isPremium) {
-      try { await coinService.spendCoins(TAROT_READING_COST); } catch { }
+    // For other spreads: if already done today, still navigate (show cached)
+    if (spreadStatus[type]) {
+      // @ts-ignore
+      navigate('EMPTY_READING', { readingType: type });
+      return;
     }
 
-    // Get AI interpretation
-    setPhase('interpret');
-    fadeAnim.setValue(0);
-
-    try {
-      const result = await generateTarotReading(
-        profile, card.name, card.keywords, reversed, card.arcana, card.suit
-      );
-
-      const today = new Date().toISOString().split('T')[0];
-      const tarotReading: TarotReading = {
-        id: `${Date.now()}-${card.id}`,
-        cardId: card.id,
-        cardName: getCardName(card),
-        isReversed: reversed,
-        interpretation: result.interpretation,
-        guidance: result.guidance,
-        affirmation: result.affirmation,
-        date: today,
-        locale,
-        generatedAt: new Date().toISOString(),
-      };
-
-      await storage.saveTarotReading(profile.uid, tarotReading);
-      setReading(tarotReading);
-      setHistory(prev => [tarotReading, ...prev]);
-      setPhase('complete');
-
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-    } catch (err: any) {
-      console.error('Tarot reading error:', err);
-      setError(t.errorGeneral);
-      setPhase('reveal');
+    if (coinBalance.coins < cost && !profile.subscription?.isPremium) {
+      alert("Not enough coins");
+      return;
     }
+    // @ts-ignore - Temporary until we update types
+    navigate('EMPTY_READING', { readingType: type });
   };
 
-  const handleDrawAgain = () => {
-    setPhase('idle');
-    setDrawnCard(null);
-    setReading(null);
-    setError(null);
-    flipAnim.setValue(0);
-    fadeAnim.setValue(0);
-  };
+  const tarotOptions = [
+    { id: 'past_present_future', title: t.spreadPastPresentFuture, icon: '⏳' },
+    { id: 'you_them_energy', title: t.spreadYouThemEnergy, icon: '☯️' },
+    { id: 'love_reading', title: t.spreadLoveReading, icon: '❤️' },
+    { id: 'career_money', title: t.spreadCareerMoney, icon: '💼' },
+    { id: 'shadow_energy', title: t.spreadShadowEnergy, icon: '🌑' },
+    { id: 'fate_choose', title: t.spreadFateChoose, icon: '✨' },
+  ];
 
-  const cardRotate = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '90deg', '0deg'] });
-  const cardOpacity = flipAnim.interpolate({ inputRange: [0, 0.45, 0.55, 1], outputRange: [0, 0, 1, 1] });
 
-  // Shuffle Interpolations
-  const card1Tx = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: [60, 0, -60] });
-  const card2Tx = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: [-60, 0, 60] });
-  const card1Rot = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-5deg', '-15deg', '-25deg'] });
-  const card2Rot = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: ['5deg', '15deg', '25deg'] });
-  const card3Tx = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: [-20, 0, 20] });
-  const card3Rot = shuffleAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-10deg', '0deg', '10deg'] });
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#0a0202', '#1a0808', '#0a0202']} style={StyleSheet.absoluteFill} />
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <LinearGradient colors={[colors.backgroundDark, '#1a0808', colors.backgroundDark]} style={StyleSheet.absoluteFill} />
+
+      {/* Background Stars (Visual Placeholder for now) */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[styles.particle, { top: '10%', left: '20%' }]} />
+        <View style={[styles.particle, { top: '25%', left: '80%' }]} />
+        <View style={[styles.particle, { top: '45%', left: '15%' }]} />
+        <View style={[styles.particle, { top: '70%', left: '85%' }]} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>{t.tarot}</Text>
-            <Text style={styles.subtitle}>{t.tarotSubtitle}</Text>
+          <Text style={styles.headerTitle}>{t.tarot || "Tarot"}</Text>
+          <View style={styles.coinBadge}>
+            <Text style={styles.coinBadgeText}>🪙 {coinBalance.coins}</Text>
           </View>
-          <Pressable onPress={() => setShowHistory(!showHistory)} style={styles.historyBtn}>
-            <Icon name="history" size={24} color="rgba(255,255,255,0.5)" />
-          </Pressable>
         </View>
 
-        {/* Cost badge */}
-        {!isPremium && phase === 'idle' && (
-          <View style={styles.costBadge}>
-            <Text style={styles.costText}>{t.tarotCost} • {t.freeForPremium}</Text>
+        {/* Daily Free Card */}
+        <View style={styles.dailySection}>
+          <Text style={styles.sectionTitle}>{t.tarotDailyReading}</Text>
+          <Animated.View style={[
+            styles.dailyCard,
+            !hasUsedDaily && {
+              borderColor: colors.accentGold,
+              borderWidth: 1.5,
+              shadowColor: colors.accentGold,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.6] }),
+              shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 15] }),
+            },
+            hasUsedDaily && {
+              opacity: 0.7,
+              borderColor: 'rgba(255,255,255,0.05)',
+            }
+          ]}>
+            <Pressable style={styles.dailyCardInner} onPress={() => handleReadingPress('daily', 0)}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.row}>
+                  <Text style={styles.dailyTitle}>{t.tarotDailyCard}</Text>
+                  {!hasUsedDaily && (
+                    <View style={styles.freeBadge}>
+                      <Text style={styles.freeBadgeText}>{t.tarotFreeBadge}</Text>
+                    </View>
+                  )}
+                </View>
+                {hasUsedDaily ? (
+                  <View style={styles.usedBadge}>
+                    <Text style={styles.usedBadgeText}>Available tomorrow</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.dailySubtitle}>{t.tarotFreeOncePerDay}</Text>
+                    <Text style={styles.dailyPrice}>🪙 0</Text>
+                  </>
+                )}
+              </View>
+              <Text style={{ fontSize: 44 }}>✨</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+
+        {/* Grid Section */}
+        <View style={styles.gridContainer}>
+          <Text style={styles.sectionTitle}>{t.tarotSpiritualSpreads}</Text>
+          <View style={styles.grid}>
+            {tarotOptions.map((opt) => {
+              const cost = 10;
+              const isDone = !!spreadStatus[opt.id];
+              return (
+                <TarotCardItem
+                  key={opt.id}
+                  title={opt.title}
+                  price={cost}
+                  icon={opt.icon}
+                  done={isDone}
+                  onPress={() => handleReadingPress(opt.id, cost)}
+                />
+              );
+            })}
           </View>
-        )}
+        </View>
 
-        {/* History */}
-        {showHistory ? (
-          <View style={{ gap: 12 }}>
-            <Text style={styles.sectionTitle}>{t.readingHistory}</Text>
-            {history.length === 0 ? (
-              <Text style={styles.emptyText}>{t.noReadings}</Text>
-            ) : (
-              history.slice(0, 10).map((r, i) => (
-                <View key={i} style={styles.historyCard}>
-                  <Text style={styles.historyCardName}>{r.cardName} {r.isReversed ? `(${t.reversed})` : `(${t.upright})`}</Text>
-                  <Text style={styles.historyDate}>{r.date}</Text>
-                  <Text style={styles.historyInterp} numberOfLines={2}>{r.interpretation}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        ) : (
-          <>
-            {/* IDLE: Draw button */}
-            {phase === 'idle' && (
-              <View style={styles.centerArea}>
-                <View style={styles.deckVisual}>
-                  <Text style={{ fontSize: 64 }}>🃏</Text>
-                </View>
-                <Pressable onPress={handleDrawCard}>
-                  <LinearGradient colors={[colors.primary, '#991b1b', colors.accentGold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.drawBtn}>
-                    <Icon name="style" size={20} color="#fff" />
-                    <Text style={styles.drawBtnText}>{t.drawCard}</Text>
-                  </LinearGradient>
-                </Pressable>
-              </View>
-            )}
-
-            {/* SHUFFLE */}
-            {phase === 'shuffle' && (
-              <View style={[styles.centerArea, { height: 320, justifyContent: 'center' }]}>
-                <View style={{ position: 'relative', width: 120, height: 180 }}>
-                  <Animated.View style={[styles.miniCard, { transform: [{ translateX: card1Tx }, { rotate: card1Rot }] }]}>
-                    <Text style={{ fontSize: 50 }}>🃏</Text>
-                  </Animated.View>
-                  <Animated.View style={[styles.miniCard, { transform: [{ translateX: card2Tx }, { rotate: card2Rot }] }]}>
-                    <Text style={{ fontSize: 50 }}>🃏</Text>
-                  </Animated.View>
-                  <Animated.View style={[styles.miniCard, { transform: [{ translateX: card3Tx }, { rotate: card3Rot }], zIndex: 10, borderColor: colors.accentGold, borderWidth: 2 }]}>
-                    <Text style={{ fontSize: 50 }}>🃏</Text>
-                  </Animated.View>
-                </View>
-                <Text style={[styles.shuffleText, { marginTop: 40 }]}>{t.shuffling}...</Text>
-              </View>
-            )}
-
-            {/* REVEAL / INTERPRET / COMPLETE */}
-            {(phase === 'reveal' || phase === 'interpret' || phase === 'complete') && drawnCard && (
-              <View style={{ gap: 20 }}>
-                {/* Card */}
-                <Animated.View style={[styles.cardContainer, { transform: [{ rotateY: cardRotate }], opacity: cardOpacity }]}>
-                  <View style={[styles.drawnCard, isReversed && { transform: [{ rotate: '180deg' }] }]}>
-                    <Text style={{ fontSize: 48 }}>{drawnCard.emoji}</Text>
-                    <Text style={styles.cardName}>{getCardName(drawnCard)}</Text>
-                    <View style={[styles.positionBadge, isReversed ? { backgroundColor: 'rgba(239,68,68,0.2)' } : { backgroundColor: 'rgba(34,197,94,0.2)' }]}>
-                      <Text style={[styles.positionText, isReversed ? { color: '#f87171' } : { color: '#4ade80' }]}>
-                        {isReversed ? t.reversed : t.upright}
-                      </Text>
-                    </View>
-                    <Text style={styles.arcanaBadge}>
-                      {drawnCard.arcana === 'major' ? t.majorArcana : t.minorArcana}
-                      {drawnCard.suit ? ` • ${drawnCard.suit}` : ''}
-                    </Text>
-                  </View>
-                </Animated.View>
-
-                {/* Interpreting */}
-                {phase === 'interpret' && (
-                  <View style={styles.interpretingBox}>
-                    <CosmicLoader size="small" color={colors.accentGold} />
-                    <Text style={styles.interpretingText}>{t.consultingStars}</Text>
-                  </View>
-                )}
-
-                {/* Reading result */}
-                {phase === 'complete' && reading && (
-                  <Animated.View style={{ opacity: fadeAnim, gap: 16 }}>
-                    <View style={styles.readingCard}>
-                      <Text style={styles.readingLabel}>{t.interpretation}</Text>
-                      <Text style={styles.readingText}>{reading.interpretation}</Text>
-                    </View>
-                    <View style={styles.readingCard}>
-                      <Text style={styles.readingLabel}>{t.guidance}</Text>
-                      <Text style={styles.readingText}>{reading.guidance}</Text>
-                    </View>
-                    <View style={styles.affirmationCard}>
-                      <Text style={styles.affirmationText}>"{reading.affirmation}"</Text>
-                    </View>
-                    <Pressable onPress={handleDrawAgain}>
-                      <LinearGradient colors={[colors.primary, '#991b1b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.drawAgainBtn}>
-                        <Text style={styles.drawAgainText}>{t.drawAgain}</Text>
-                      </LinearGradient>
-                    </Pressable>
-                  </Animated.View>
-                )}
-
-                {error && (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{error}</Text>
-                    <Pressable onPress={handleDrawAgain} style={styles.retryBtn}>
-                      <Text style={styles.retryText}>{t.retry}</Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-            )}
-          </>
-        )}
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      <Navigation activeScreen="TAROT" navigate={navigate} isPremium={!!isPremium} />
-
-      {/* Coin gate modal */}
-      {showCoinGate && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.gateCard}>
-            <Text style={{ fontSize: 48 }}>🪙</Text>
-            <Text style={styles.gateTitle}>{t.notEnoughCoins}</Text>
-            <Text style={styles.gateDesc}>{t.needCoinsForTarot}</Text>
-            <View style={styles.gateActions}>
-              <Pressable onPress={() => { setShowCoinGate(false); setShowAdModal(true); }} style={styles.gateBtn}>
-                <Text style={styles.gateBtnText}>{t.earnCoinsFirst}</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowCoinGate(false); navigate('PREMIUM'); }} style={[styles.gateBtn, { backgroundColor: 'rgba(243,198,35,0.1)', borderColor: 'rgba(243,198,35,0.3)' }]}>
-                <Text style={[styles.gateBtnText, { color: colors.accentGold }]}>{t.goPremium}</Text>
-              </Pressable>
-            </View>
-            <Pressable onPress={() => setShowCoinGate(false)} style={{ marginTop: 16 }}>
-              <Text style={styles.closeText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      <RewardedAdModal
-        isOpen={showAdModal}
-        onClose={() => setShowAdModal(false)}
-        rewardCountToday={coinBalance.rewardCountToday}
-        onCoinUpdate={(newBal) => setCoinBalance(newBal)}
-      />
-    </View>
+      <Navigation activeScreen="TAROT" navigate={navigate} isPremium={!!profile.subscription?.isPremium} />
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 48 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  title: { color: '#fff', fontSize: 28, fontWeight: 'bold', fontStyle: 'italic' },
-  subtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 14, marginTop: 4 },
-  historyBtn: { width: 44, height: 44, borderRadius: 22, ...glassPanel, alignItems: 'center', justifyContent: 'center' },
-  costBadge: { ...glassPanel, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'center', marginBottom: 20 },
-  costText: { color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: 1 },
-  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
-  emptyText: { color: 'rgba(255,255,255,0.3)', fontSize: 14, textAlign: 'center', paddingVertical: 32 },
-  historyCard: { ...glassPanel, borderRadius: 16, padding: 16 },
-  historyCardName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  historyDate: { color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 2 },
-  historyInterp: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 8 },
-  centerArea: { alignItems: 'center', paddingVertical: 60, gap: 32 },
-  deckVisual: { width: 160, height: 220, borderRadius: 20, ...glassPanel, alignItems: 'center', justifyContent: 'center' },
-  drawBtn: { height: 56, paddingHorizontal: 40, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8 },
-  drawBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  shuffleText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, letterSpacing: 2, textTransform: 'uppercase' },
-  cardContainer: { alignItems: 'center' },
-  drawnCard: { width: 200, height: 280, borderRadius: 20, ...glassPanel, borderColor: 'rgba(243,198,35,0.3)', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  cardName: { color: '#fff', fontSize: 20, fontWeight: 'bold', fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 16 },
-  miniCard: { position: 'absolute', width: 120, height: 180, borderRadius: 16, ...glassPanel, alignItems: 'center', justifyContent: 'center', top: 0, left: 0 },
-  positionBadge: { borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12 },
-  positionText: { fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
-  arcanaBadge: { color: 'rgba(255,255,255,0.3)', fontSize: 10, textTransform: 'capitalize' },
-  interpretingBox: { ...glassPanel, borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  interpretingText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, letterSpacing: 1 },
-  readingCard: { ...glassPanel, borderRadius: 16, padding: 20 },
-  readingLabel: { color: colors.accentGold, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 },
-  readingText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 22 },
-  affirmationCard: { ...glassPanel, borderColor: 'rgba(243,198,35,0.2)', borderRadius: 16, padding: 20, alignItems: 'center' },
-  affirmationText: { color: colors.accentGold, fontSize: 16, fontStyle: 'italic', textAlign: 'center', lineHeight: 24 },
-  drawAgainBtn: { height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  drawAgainText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  errorBox: { ...glassPanel, backgroundColor: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)', borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
-  errorText: { color: '#f87171', fontSize: 13 },
-  retryBtn: { ...glassPanel, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16 },
-  retryText: { color: '#fff', fontSize: 12 },
-  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
-  gateCard: { ...glassPanel, borderRadius: 24, padding: 32, alignItems: 'center', width: screenWidth - 64, gap: 12 },
-  gateTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  gateDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center' },
-  gateActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  gateBtn: { flex: 1, height: 44, borderRadius: 12, ...glassPanel, alignItems: 'center', justifyContent: 'center' },
-  gateBtnText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
-  closeText: { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
+  container: { flex: 1, backgroundColor: colors.backgroundDark },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 60 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
+  headerTitle: { color: '#fff', fontSize: 34, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
+  coinBadge: { ...glassPanel, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)' },
+  coinBadgeText: { color: colors.accentGold, fontWeight: 'bold', fontSize: 14 },
+  sectionTitle: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 },
+  dailySection: { marginBottom: 32 },
+  dailyCard: { ...glassPanel, borderRadius: 24, overflow: 'hidden' },
+  dailyCardInner: { padding: 24, flexDirection: 'row', alignItems: 'center' },
+  dailyTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginRight: 10 },
+  dailySubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 4 },
+  dailyPrice: { color: colors.accentGold, fontSize: 16, fontWeight: 'bold', marginTop: 12 },
+  freeBadge: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  freeBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  usedBadge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 12, alignSelf: 'flex-start' },
+  usedBadgeText: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '500' },
+  gridContainer: { marginBottom: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  cardItemContainer: { width: '48%', marginBottom: 16 },
+  cardItemInner: { ...glassPanel, borderRadius: 18, padding: 20, alignItems: 'center', minHeight: 160 },
+  cardIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, position: 'relative' },
+
+  cardItemTitle: { color: '#fff', fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 12, lineHeight: 18 },
+  cardItemPriceRow: { flexDirection: 'row', alignItems: 'center' },
+  cardItemPriceText: { color: colors.accentGold, fontSize: 13, fontWeight: 'bold' },
+  doneBadge: { backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10 },
+  doneBadgeText: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  particle: { position: 'absolute', width: 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.3)' },
 });
 
 export default TarotScreen;

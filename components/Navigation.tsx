@@ -10,7 +10,7 @@ interface NavigationProps {
   isPremium?: boolean;
 }
 
-const premiumScreens = new Set<Screen>(['CALENDAR', 'COMPARE']);
+
 const items = [
   { screen: 'DASHBOARD' as Screen, icon: 'home', label: 'Home' },
   { screen: 'CALENDAR' as Screen, icon: 'calendar_month', label: 'Moon' },
@@ -37,11 +37,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeScreen, navigate, isPremi
           <Pressable key={item.screen} onPress={() => navigate(item.screen)} style={styles.navItem}>
             <Icon name={item.icon} size={24} color={isActive ? colors.primary : 'rgba(255,255,255,0.3)'} />
             <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
-            {!isPremium && premiumScreens.has(item.screen) && (
-              <View style={styles.lockBadge}>
-                <Icon name="lock" size={8} color="rgba(243,198,35,0.6)" />
-              </View>
-            )}
+
           </Pressable>
         );
       })}

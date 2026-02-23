@@ -50,6 +50,7 @@
 
 ### Tarot Reading Feature ✅ COMPLETE
 - [x] Full 78-card deck (22 Major Arcana + 56 Minor Arcana)
+- [x] Integrate 78 real Tarot card PNG images into the deck mappings
 - [x] 4 Minor Arcana suits (Wands, Cups, Swords, Pentacles)
 - [x] Trilingual card names (en/tr/th)
 - [x] Card shuffle animation (Animated API)
@@ -60,6 +61,15 @@
 - [x] Today's reading cache (same card on revisit)
 - [x] 5-phase flow: idle → shuffle → reveal → interpret → complete
 - [x] Coin gating: 6 coins for free users, free for premium
+- [x] **New**: Daily Free Tarot feature with minimalist premium UI, 1x/day lock mechanic, local cache, and structured GPT prompt (Overall Energy, Emotional Tone, Subtle Advice).
+- [x] **New**: Past - Present - Future Tarot spread reading feature (10 coins) with custom context collection, sequential card reveal animations, and layered structured GPT interpretation.
+- [x] **Redesigned (Feb 23, Session 7)**: PPF completely rewritten — 2-stage flow (category → reading), per-card GPT interpretation after each flip (cardMeaning + personalInterpretation), final integration message, flip animations with haptic, same-day cache, intimate fortune-teller tone.
+- [x] **AI Tone Fix (Session 7)**: GPT prompts rewritten from educational/neutral to experienced fortune-teller — warm, direct, blunt, honest. Natural speech, not textbook.
+- [x] **Daily Limit System (Session 7)**: All spreads limited to 1x/day with cache. Done spreads show ✓ badge + 50% opacity. Generic getSpreadReading/saveSpreadReading/getTodaySpreadStatus in storage.ts.
+- [x] **3D Card Preview Modal (Session 7)**: Tapping revealed cards opens fullscreen 3D preview — spring scale + Y-axis rotation + golden glow border. Available in PPF and YTE screens.
+- [x] **You – Them – Energy Spread (Session 8)**: Complete 3-card relationship reading — name input + relationship type selection (6 options), sequential card flip with per-card GPT, final integration, 3D preview, same-day cache. New screen + types + GPT functions + storage + 22 translation keys in all 7 locales.
+- [x] Full i18n translation support (TR, TH, ES, DE, FR, JA) mapped for the Past-Present-Future feature.
+- [x] Refined UI for Past-Present-Future reading to ensure maximum card visibility and remove accidental close issues.
 
 ### Coin System ✅ COMPLETE
 - [x] Cloud Functions backend (addRewardCoin, spendCoins, getCoinBalance)
@@ -111,11 +121,13 @@
 - [x] LinearGradient backgrounds (replaces Vanta.js)
 - [x] Loading states with ActivityIndicator
 - [x] Responsive layout via React Native flexbox
+- [x] Cosmic Overhaul: Replaced generic loaders with `CosmicLoader` custom animations
+- [x] Tarot UI 2.0: Selection grid, daily free card, dynamic coin feedback (removed visual lock icons for a cleaner look)
+- [x] Global UI Alignment: Applied primary cosmic colors to Tarot for visual consistency
 
 ### Localization
-- [x] English translation strings
-- [x] Turkish translation strings
-- [x] Thai translation strings (complete)
+- [x] English, Turkish, Thai support
+- [x] Expansion (Feb 23, 2026): Added Spanish (es), French (fr), German (de), and Japanese (ja) support across all screens and AI translations.
 - [x] Dynamic locale switching across all screens
 - [x] Fallback to English for missing translations
 
@@ -196,5 +208,5 @@
 2. **Deploy Cloud Functions** (limit updated to 3)
 3. **Real In-App Purchases** (replace placeholder Alert in Premium)
 
-### Overall Health (Updated Feb 22, 2026 — Session 4)
-**Excellent — Native Build and Auth Successful.** The transition to Expo native builds (`npx expo run:android`) was successfully achieved. The Firebase Android app was configured with the SHA-1 fingerprint, resolving the `redirect_uri_mismatch` error and fully enabling native `@react-native-google-signin/google-signin`. In addition, UI elements were upgraded to use native modules like `DateTimePicker` for a premium look and feel. Next milestone: Test and verify AdMob ads.
+### Overall Health (Updated Feb 23, 2026 — Session 8)
+**Excellent — Tarot System Maturing.** Two of six tarot spreads are now fully implemented (PPF + YTE) with rich AI-powered interpretations in fortune-teller tone. Daily limit system ensures users return each day. 3D card preview adds premium feel. Four more spreads remain (Love, Career, Shadow, Fate). The application continues to have 0 TypeScript errors and clean architecture. Screen type now has 14 values.

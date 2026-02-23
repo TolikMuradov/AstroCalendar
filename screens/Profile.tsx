@@ -27,10 +27,14 @@ const languages: { code: Locale; flag: string; name: string }[] = [
   { code: 'en', flag: '🇺🇸', name: 'English' },
   { code: 'tr', flag: '🇹🇷', name: 'Türkçe' },
   { code: 'th', flag: '🇹🇭', name: 'ไทย' },
+  { code: 'es', flag: '🇪🇸', name: 'Español' },
+  { code: 'fr', flag: '🇫🇷', name: 'Français' },
+  { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
+  { code: 'ja', flag: '🇯🇵', name: '日本語' },
 ];
 
 const ProfileScreen: React.FC<ProfileProps> = ({ profile, onLogout, navigate, onProfileUpdate }) => {
-  const [locale, setLocale] = useState(profile.locale || 'en');
+  const locale = profile.locale || 'en';
   const t = translations[locale];
 
   const [editMode, setEditMode] = useState(false);
@@ -54,8 +58,6 @@ const ProfileScreen: React.FC<ProfileProps> = ({ profile, onLogout, navigate, on
       setDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
     }
     (async () => {
-      const loc = await storage.getLocale();
-      if (loc) setLocale(loc);
       try {
         const bal = await coinService.getBalance();
         setCoinBalance(bal);
@@ -89,7 +91,6 @@ const ProfileScreen: React.FC<ProfileProps> = ({ profile, onLogout, navigate, on
   };
 
   const handleLanguageChange = async (newLocale: Locale) => {
-    setLocale(newLocale);
     await storage.setLocale(newLocale);
     const updated = { ...profile, locale: newLocale };
     await storage.setProfile(updated);

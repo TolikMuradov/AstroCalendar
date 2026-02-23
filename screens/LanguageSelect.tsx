@@ -13,6 +13,10 @@ const languages = [
   { code: 'en' as Locale, flag: '🇺🇸', name: 'English' },
   { code: 'tr' as Locale, flag: '🇹🇷', name: 'Türkçe' },
   { code: 'th' as Locale, flag: '🇹🇭', name: 'ไทย (Thai)' },
+  { code: 'es' as Locale, flag: '🇪🇸', name: 'Español' },
+  { code: 'fr' as Locale, flag: '🇫🇷', name: 'Français' },
+  { code: 'de' as Locale, flag: '🇩🇪', name: 'Deutsch' },
+  { code: 'ja' as Locale, flag: '🇯🇵', name: '日本語' },
 ];
 
 const LanguageSelectScreen: React.FC<LanguageSelectProps> = ({ onSelect }) => {

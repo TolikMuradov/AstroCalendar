@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+// @ts-ignore - getReactNativePersistence is available in RN bundle via package.json "react-native" field
 import { initializeAuth, getReactNativePersistence, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';

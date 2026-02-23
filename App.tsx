@@ -4,7 +4,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Screen, UserProfile, Locale } from './types';
 import { storage } from './services/storage';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './services/firebase';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { auth, db } from './services/firebase';
 import { computeProfile } from './utils/astrology';
 import { showAppOpenAd } from './services/admobAppOpen';
 import WelcomeScreen from './screens/Welcome';
@@ -17,6 +18,10 @@ import TarotScreen from './screens/Tarot';
 import ProfileScreen from './screens/Profile';
 import PremiumScreen from './screens/Premium';
 import CompareScreen from './screens/Compare';
+import EmptyReadingScreen from './screens/EmptyReading';
+import DailyCardScreen from './screens/DailyCard';
+import PastPresentFutureScreen from './screens/PastPresentFuture';
+import YouThemEnergyScreen from './screens/YouThemEnergy';
 import { colors } from './styles/theme';
 
 const App: React.FC = () => {
@@ -27,10 +32,6 @@ const App: React.FC = () => {
   const [appOpenAdShown, setAppOpenAdShown] = useState(false);
 
   const navigate = (screen: Screen) => {
-    if ((screen === 'CALENDAR' || screen === 'COMPARE') && userProfile && !userProfile.subscription?.isPremium) {
-      setCurrentScreen('PREMIUM');
-      return;
-    }
     setCurrentScreen(screen);
   };
 
@@ -53,7 +54,15 @@ const App: React.FC = () => {
   }, [currentScreen, userProfile, appOpenAdShown]);
 
   useEffect(() => {
+    let profileUnsub: any = null;
+
     const unsub = onAuthStateChanged(auth, async (user) => {
+      // Clear previous listener if any
+      if (profileUnsub) {
+        profileUnsub();
+        profileUnsub = null;
+      }
+
       if (user) {
         setTempUser({ uid: user.uid, name: user.displayName || '', email: user.email || '' });
 
@@ -78,6 +87,34 @@ const App: React.FC = () => {
           setUserProfile(normalized);
           setCurrentScreen('DASHBOARD');
         }
+
+        // --- REAL-TIME LISTENER FOR FIREBASE MANUAL UPDATES ---
+        profileUnsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+          if (snap.exists() && existing) {
+            const data = snap.data();
+            setUserProfile((prev) => {
+              if (!prev) return prev;
+              const updated = { ...prev };
+              let changed = false;
+
+              if (data.subscription && JSON.stringify(data.subscription) !== JSON.stringify(prev.subscription)) {
+                updated.subscription = data.subscription;
+                changed = true;
+              }
+              if (data.name && data.name !== prev.name) {
+                updated.name = data.name;
+                changed = true;
+              }
+
+              if (changed) {
+                storage.setProfile(updated); // arka planda cache'i güncelle
+                return updated;
+              }
+              return prev;
+            });
+          }
+        });
+
       } else {
         setUserProfile(null);
         setTempUser(null);
@@ -85,7 +122,13 @@ const App: React.FC = () => {
       }
       setInitialized(true);
     });
-    return unsub;
+
+    return () => {
+      unsub();
+      if (profileUnsub) {
+        profileUnsub();
+      }
+    };
   }, []);
 
   const handleLanguageSelect = (lang: Locale) => {
@@ -96,7 +139,7 @@ const App: React.FC = () => {
   const handleOnboardingComplete = async (profile: UserProfile) => {
     setUserProfile(profile);
     await storage.setProfile(profile);
-    try { await storage.saveProfileToFirebase(profile); } catch {}
+    try { await storage.saveProfileToFirebase(profile); } catch { }
     navigate('DASHBOARD');
   };
 
@@ -111,7 +154,7 @@ const App: React.FC = () => {
   const handleProfileUpdate = async (updatedProfile: UserProfile) => {
     setUserProfile(updatedProfile);
     await storage.saveProfile(updatedProfile);
-    try { await storage.saveProfileToFirebase(updatedProfile); } catch {}
+    try { await storage.saveProfileToFirebase(updatedProfile); } catch { }
   };
 
   if (!initialized) {
@@ -138,6 +181,10 @@ const App: React.FC = () => {
       case 'PROFILE': return userProfile ? <ProfileScreen profile={userProfile} onLogout={handleLogout} navigate={navigate} onProfileUpdate={handleProfileUpdate} /> : null;
       case 'PREMIUM': return <PremiumScreen onClose={() => navigate('DASHBOARD')} profile={userProfile} />;
       case 'COMPARE': return userProfile ? <CompareScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'EMPTY_READING': return <EmptyReadingScreen route={{} as any} navigate={navigate} />;
+      case 'DAILY_CARD': return userProfile ? <DailyCardScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'PAST_PRESENT_FUTURE': return userProfile ? <PastPresentFutureScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'YOU_THEM_ENERGY': return userProfile ? <YouThemEnergyScreen profile={userProfile} navigate={navigate} /> : null;
       default: return <WelcomeScreen onContinue={() => navigate('SIGN_IN')} />;
     }
   };
