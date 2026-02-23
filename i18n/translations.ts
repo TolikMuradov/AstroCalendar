@@ -137,7 +137,22 @@ export const translations = {
     yteYourCard: "The {position} card is",
     yteCardMeaning: "Card Meaning",
     ytePersonalMeaning: "What This Means For Your Connection",
-    yteIntegrating: "Weaving your connection together..."
+    yteIntegrating: "Weaving your connection together...",
+    // Love Reading spread
+    loveSubtitle: "Let the cards reveal what your heart already knows.",
+    lovePartnerName: "Their Name",
+    lovePartnerPlaceholder: "Who holds your heart?",
+    loveRevealCards: "Open Your Heart",
+    loveHeart: "Your Heart",
+    loveConnection: "The Connection",
+    loveFuture: "Love's Future",
+    loveCosmosInterpreting: "The universe is reading your heart...",
+    loveIntegrationInsight: "Love's Message",
+    loveClosing: "Love speaks in whispers. Listen closely.",
+    loveYourCard: "The {position} card is",
+    loveCardMeaning: "Card Meaning",
+    lovePersonalMeaning: "What This Means For Your Love",
+    loveIntegrating: "Weaving your love story together..."
   },
   tr: {
     welcome: "Kozmik yolculuğunuz başlıyor.",
@@ -276,7 +291,22 @@ export const translations = {
     yteYourCard: "{position} kartı",
     yteCardMeaning: "Kart Anlamı",
     ytePersonalMeaning: "Bağlantınız İçin Ne Anlama Geliyor",
-    yteIntegrating: "Bağlantınız bir araya getiriliyor..."
+    yteIntegrating: "Bağlantınız bir araya getiriliyor...",
+    // Aşk Falı
+    loveSubtitle: "Kartların kalbinin zaten bildiğini açığa çıkarmasına izin ver.",
+    lovePartnerName: "Adı",
+    lovePartnerPlaceholder: "Kalbini kim tutuyor?",
+    loveRevealCards: "Kalbini Aç",
+    loveHeart: "Kalbin",
+    loveConnection: "Bağlantı",
+    loveFuture: "Aşkın Geleceği",
+    loveCosmosInterpreting: "Evren kalbini okuyor...",
+    loveIntegrationInsight: "Aşkın Mesajı",
+    loveClosing: "Aşk fısıltılarla konuşur. Dikkatle dinle.",
+    loveYourCard: "{position} kartı",
+    loveCardMeaning: "Kart Anlamı",
+    lovePersonalMeaning: "Aşkın İçin Ne Anlama Geliyor",
+    loveIntegrating: "Aşk hikayeniz bir araya getiriliyor..."
   },
   th: {
     welcome: "การเดินทางจักรวาลของคุณเริ่มขึ้น",
@@ -414,7 +444,22 @@ export const translations = {
     yteYourCard: "ไพ่ {position} คือ",
     yteCardMeaning: "ความหมายของไพ่",
     ytePersonalMeaning: "สิ่งนี้หมายถึงอะไรสำหรับความสัมพันธ์ของคุณ",
-    yteIntegrating: "กำลังร้อยเรียงความสัมพันธ์ของคุณเข้าด้วยกัน..."
+    yteIntegrating: "กำลังร้อยเรียงความสัมพันธ์ของคุณเข้าด้วยกัน...",
+    // ความรัก
+    loveSubtitle: "ให้ไพ่เปิดเผยสิ่งที่หัวใจของคุณรู้อยู่แล้ว",
+    lovePartnerName: "ชื่อของเขา/เธอ",
+    lovePartnerPlaceholder: "ใครครองหัวใจคุณ?",
+    loveRevealCards: "เปิดหัวใจของคุณ",
+    loveHeart: "หัวใจของคุณ",
+    loveConnection: "ความเชื่อมโยง",
+    loveFuture: "อนาคตของความรัก",
+    loveCosmosInterpreting: "จักรวาลกำลังอ่านหัวใจของคุณ...",
+    loveIntegrationInsight: "ข้อความแห่งความรัก",
+    loveClosing: "ความรักพูดเป็นเสียงกระซิบ ฟังให้ดี",
+    loveYourCard: "ไพ่ {position} คือ",
+    loveCardMeaning: "ความหมายของไพ่",
+    lovePersonalMeaning: "สิ่งนี้หมายถึงอะไรสำหรับความรักของคุณ",
+    loveIntegrating: "กำลังร้อยเรียงเรื่องราวความรักของคุณ..."
   },
   es: {
     welcome: "Tu viaje cósmico comienza.",
@@ -550,7 +595,22 @@ export const translations = {
     yteYourCard: "La carta de {position} es",
     yteCardMeaning: "Significado de la Carta",
     ytePersonalMeaning: "Qué Significa Para Tu Conexión",
-    yteIntegrating: "Tejiendo su conexión juntos..."
+    yteIntegrating: "Tejiendo su conexión juntos...",
+    // Lectura de Amor
+    loveSubtitle: "Deja que las cartas revelen lo que tu corazón ya sabe.",
+    lovePartnerName: "Su Nombre",
+    lovePartnerPlaceholder: "¿Quién tiene tu corazón?",
+    loveRevealCards: "Abre Tu Corazón",
+    loveHeart: "Tu Corazón",
+    loveConnection: "La Conexión",
+    loveFuture: "Futuro del Amor",
+    loveCosmosInterpreting: "El universo está leyendo tu corazón...",
+    loveIntegrationInsight: "Mensaje del Amor",
+    loveClosing: "El amor habla en susurros. Escucha atentamente.",
+    loveYourCard: "La carta de {position} es",
+    loveCardMeaning: "Significado de la Carta",
+    lovePersonalMeaning: "Qué Significa Para Tu Amor",
+    loveIntegrating: "Tejiendo tu historia de amor..."
   },
   fr: {
     welcome: "Votre voyage cosmique commence.",
@@ -686,7 +746,22 @@ export const translations = {
     yteYourCard: "La carte de {position} est",
     yteCardMeaning: "Signification de la Carte",
     ytePersonalMeaning: "Ce Que Cela Signifie Pour Votre Connexion",
-    yteIntegrating: "Tissage de votre connexion ensemble..."
+    yteIntegrating: "Tissage de votre connexion ensemble...",
+    // Lecture d'Amour
+    loveSubtitle: "Laissez les cartes révéler ce que votre cœur sait déjà.",
+    lovePartnerName: "Son Nom",
+    lovePartnerPlaceholder: "Qui tient votre cœur ?",
+    loveRevealCards: "Ouvrez Votre Cœur",
+    loveHeart: "Votre Cœur",
+    loveConnection: "La Connexion",
+    loveFuture: "L'Avenir Amoureux",
+    loveCosmosInterpreting: "L'univers lit votre cœur...",
+    loveIntegrationInsight: "Message d'Amour",
+    loveClosing: "L'amour parle en murmures. Écoutez attentivement.",
+    loveYourCard: "La carte de {position} est",
+    loveCardMeaning: "Signification de la Carte",
+    lovePersonalMeaning: "Ce Que Cela Signifie Pour Votre Amour",
+    loveIntegrating: "Tissage de votre histoire d'amour..."
   },
   de: {
     welcome: "Deine kosmische Reise beginnt.",
@@ -822,7 +897,22 @@ export const translations = {
     yteYourCard: "Die {position}-Karte ist",
     yteCardMeaning: "Kartenbedeutung",
     ytePersonalMeaning: "Was Das Für Eure Verbindung Bedeutet",
-    yteIntegrating: "Eure Verbindung wird zusammengewebt..."
+    yteIntegrating: "Eure Verbindung wird zusammengewebt...",
+    // Liebes-Lesung
+    loveSubtitle: "Lass die Karten enthüllen, was dein Herz bereits weiß.",
+    lovePartnerName: "Ihr/Sein Name",
+    lovePartnerPlaceholder: "Wer hält dein Herz?",
+    loveRevealCards: "Öffne Dein Herz",
+    loveHeart: "Dein Herz",
+    loveConnection: "Die Verbindung",
+    loveFuture: "Zukunft der Liebe",
+    loveCosmosInterpreting: "Das Universum liest dein Herz...",
+    loveIntegrationInsight: "Botschaft der Liebe",
+    loveClosing: "Liebe spricht in Flüstern. Höre genau hin.",
+    loveYourCard: "Die {position}-Karte ist",
+    loveCardMeaning: "Kartenbedeutung",
+    lovePersonalMeaning: "Was Das Für Deine Liebe Bedeutet",
+    loveIntegrating: "Deine Liebesgeschichte wird zusammengewebt..."
   },
   ja: {
     welcome: "あなたの宇宙の旅が始まります。",
@@ -958,6 +1048,21 @@ export const translations = {
     yteYourCard: "{position}のカードは",
     yteCardMeaning: "カードの意味",
     ytePersonalMeaning: "あなたのつながりへのメッセージ",
-    yteIntegrating: "あなたのつながりを紡ぎ合わせています..."
+    yteIntegrating: "あなたのつながりを紡ぎ合わせています...",
+    // 恋愛占い
+    loveSubtitle: "カードがあなたの心がすでに知っていることを明らかにします。",
+    lovePartnerName: "お相手の名前",
+    lovePartnerPlaceholder: "あなたの心を握っているのは誰？",
+    loveRevealCards: "心を開く",
+    loveHeart: "あなたの心",
+    loveConnection: "つながり",
+    loveFuture: "愛の未来",
+    loveCosmosInterpreting: "宇宙があなたの心を読んでいます...",
+    loveIntegrationInsight: "愛のメッセージ",
+    loveClosing: "愛はささやきで語ります。よく聞いてください。",
+    loveYourCard: "{position}のカードは",
+    loveCardMeaning: "カードの意味",
+    lovePersonalMeaning: "あなたの愛へのメッセージ",
+    loveIntegrating: "あなたの愛の物語を紡いでいます..."
   }
 };

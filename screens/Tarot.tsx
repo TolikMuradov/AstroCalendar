@@ -107,6 +107,10 @@ const TarotScreen: React.FC<TarotProps> = ({ profile, navigate }) => {
       navigate('YOU_THEM_ENERGY');
       return;
     }
+    if (type === 'love_reading') {
+      navigate('LOVE_READING');
+      return;
+    }
 
     // For other spreads: if already done today, still navigate (show cached)
     if (spreadStatus[type]) {

@@ -1,4 +1,4 @@
-export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE' | 'EMPTY_READING' | 'DAILY_CARD' | 'PAST_PRESENT_FUTURE' | 'YOU_THEM_ENERGY';
+export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE' | 'EMPTY_READING' | 'DAILY_CARD' | 'PAST_PRESENT_FUTURE' | 'YOU_THEM_ENERGY' | 'LOVE_READING';
 
 export type Locale = 'en' | 'tr' | 'th' | 'es' | 'fr' | 'de' | 'ja';
 
@@ -146,6 +146,27 @@ export interface YouThemEnergyReading {
   youCard: YTECardData;
   themCard: YTECardData;
   energyCard: YTECardData;
+  finalIntegration: string;
+  date: string;
+  locale: Locale;
+  generatedAt: string;
+}
+
+export interface LoveCardData {
+  id: number;
+  name: string;
+  isReversed: boolean;
+  keywords: string[];
+  cardMeaning: string;
+  personalInterpretation: string;
+}
+
+export interface LoveReading {
+  id: string;
+  partnerName: string;
+  heartCard: LoveCardData;
+  connectionCard: LoveCardData;
+  futureCard: LoveCardData;
   finalIntegration: string;
   date: string;
   locale: Locale;

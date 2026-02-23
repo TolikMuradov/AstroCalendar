@@ -22,6 +22,7 @@ import EmptyReadingScreen from './screens/EmptyReading';
 import DailyCardScreen from './screens/DailyCard';
 import PastPresentFutureScreen from './screens/PastPresentFuture';
 import YouThemEnergyScreen from './screens/YouThemEnergy';
+import LoveReadingScreen from './screens/LoveReading';
 import { colors } from './styles/theme';
 
 const App: React.FC = () => {
@@ -185,6 +186,7 @@ const App: React.FC = () => {
       case 'DAILY_CARD': return userProfile ? <DailyCardScreen profile={userProfile} navigate={navigate} /> : null;
       case 'PAST_PRESENT_FUTURE': return userProfile ? <PastPresentFutureScreen profile={userProfile} navigate={navigate} /> : null;
       case 'YOU_THEM_ENERGY': return userProfile ? <YouThemEnergyScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'LOVE_READING': return userProfile ? <LoveReadingScreen profile={userProfile} navigate={navigate} /> : null;
       default: return <WelcomeScreen onContinue={() => navigate('SIGN_IN')} />;
     }
   };

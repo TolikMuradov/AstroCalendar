@@ -382,3 +382,82 @@ Return ONLY valid JSON:
 
   return await callOpenAI(prompt, 512);
 }
+
+export async function generateLoveCardInterpretation(
+  profile: UserProfile,
+  cardName: string,
+  isReversed: boolean,
+  position: 'Heart' | 'Connection' | 'Future',
+  partnerName: string
+): Promise<{ cardMeaning: string; personalInterpretation: string }> {
+  const langName = getLangName(profile.locale);
+  const orientation = isReversed ? 'Reversed' : 'Upright';
+
+  const positionContext = position === 'Heart'
+    ? `This card represents ${profile.name}'s deepest feelings and heart energy right now.`
+    : position === 'Connection'
+    ? `This card represents the romantic energy flowing between ${profile.name} and ${partnerName} — the chemistry, the tension, the unspoken.`
+    : `This card reveals where this love story is heading — the potential, the warning, the promise.`;
+
+  const prompt = `You are a romantic fortune teller who specializes in LOVE readings. You've helped thousands of lovers, heartbroken souls, and hopeful romantics. You speak with warmth, passion, and honesty. Your style is intimate — like a wise friend who truly SEES people's hearts.
+
+This is a LOVE READING — the most intimate spread you offer.
+${profile.name} is asking about their romantic connection with ${partnerName}.
+
+${positionContext}
+
+Rules:
+- Be WARM and PASSIONATE — this is about LOVE, the most powerful human force.
+- Use romantic, evocative language but stay grounded and honest.
+- You can say things like "Your heart already knows...", "Love doesn't lie, and neither does this card...", "There's fire here...", "I can feel the pull between you two..."
+- Be honest about challenges but always with compassion.
+- No emojis. No bullet points. Just flowing, heartfelt speech.
+- 200-300 words total across both sections.
+- Address ${profile.name} by name sometimes.
+
+Card: ${cardName} (${orientation})
+Position: ${position === 'Heart' ? 'Your Heart' : position === 'Connection' ? 'The Connection' : 'Love\'s Future'}
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign} (${profile.computedProfile.westernZodiac.element})
+Today: ${new Date().toISOString().split('T')[0]}
+
+Language: ALL text in ${langName}. Write naturally as a native speaker would.
+
+Return ONLY valid JSON:
+{
+  "cardMeaning": "What this card means in the context of love — explain it intimately, like you're reading someone's heart across a candlelit table.",
+  "personalInterpretation": "Now speak directly to ${profile.name} about their love life with ${partnerName}. Be personal, passionate, and real. Start with something that grabs their heart."
+}`;
+
+  return await callOpenAI(prompt, 1024);
+}
+
+export async function generateLoveFinalIntegration(
+  profile: UserProfile,
+  heartCardName: string,
+  connectionCardName: string,
+  futureCardName: string,
+  partnerName: string
+): Promise<{ finalIntegration: string }> {
+  const langName = getLangName(profile.locale);
+
+  const prompt = `You are a romantic fortune teller wrapping up a LOVE reading. You've just laid out three cards — Your Heart (${heartCardName}), The Connection (${connectionCardName}), Love's Future (${futureCardName}) — for ${profile.name} about their romantic connection with ${partnerName}.
+
+Now tie it all together in 120-180 words. This is your closing love message.
+
+Rules:
+- This is about LOVE — be warm, passionate, and deeply personal.
+- Connect the three cards into one love story — show how the heart, the connection, and the future weave together.
+- Be honest. If the cards show heartbreak potential, say it with compassion. If they show deep love, let it bloom.
+- End with something that resonates in the heart — a truth about love they'll carry with them.
+- No emojis. No bullet points. No repeating what you already said about each card.
+- Sound like you're holding ${profile.name}'s hands across the table, giving them your honest, loving truth.
+
+Language: ALL text in ${langName}. Write like a native speaker, naturally.
+
+Return ONLY valid JSON:
+{
+  "finalIntegration": "text"
+}`;
+
+  return await callOpenAI(prompt, 512);
+}

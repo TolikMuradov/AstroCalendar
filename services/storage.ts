@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight, TarotReading, DailyTarotReading, PastPresentFutureReading, YouThemEnergyReading } from '../types';
+import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight, TarotReading, DailyTarotReading, PastPresentFutureReading, YouThemEnergyReading, LoveReading } from '../types';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -102,6 +102,16 @@ export const storage = {
     await AsyncStorage.setItem(key, JSON.stringify(reading));
   },
 
+  async getLoveReading(uid: string, date: string): Promise<LoveReading | null> {
+    const key = `${PREFIX}love_tarot_${uid}_${date}`;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  },
+  async saveLoveReading(uid: string, reading: LoveReading): Promise<void> {
+    const key = `${PREFIX}love_tarot_${uid}_${reading.date}`;
+    await AsyncStorage.setItem(key, JSON.stringify(reading));
+  },
+
   // Generic spread completion tracking (for non-PPF spreads)
   async getSpreadReading(uid: string, spreadType: string, date: string): Promise<any | null> {
     const key = `${PREFIX}spread_${spreadType}_${uid}_${date}`;
@@ -131,9 +141,13 @@ export const storage = {
     const yte = await storage.getYouThemEnergyReading(uid, today);
     status['you_them_energy'] = !!yte;
 
+    // Check Love Reading
+    const love = await storage.getLoveReading(uid, today);
+    status['love_reading'] = !!love;
+
     // Check other spreads
     for (const spread of spreads) {
-      if (spread === 'past_present_future' || spread === 'you_them_energy') continue;
+      if (spread === 'past_present_future' || spread === 'you_them_energy' || spread === 'love_reading') continue;
       const data = await storage.getSpreadReading(uid, spread, today);
       status[spread] = !!data;
     }
