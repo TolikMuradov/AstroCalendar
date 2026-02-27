@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight, TarotReading, DailyTarotReading, PastPresentFutureReading, YouThemEnergyReading, LoveReading } from '../types';
+import { Locale, DailyInsight, YearlyInsight, UserProfile, MonthlyInsight, TarotReading, DailyTarotReading, PastPresentFutureReading, YouThemEnergyReading, LoveReading, CareerReading, ShadowSession, ShadowReflection, DeepRefSession } from '../types';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -112,6 +112,61 @@ export const storage = {
     await AsyncStorage.setItem(key, JSON.stringify(reading));
   },
 
+  async getCareerReading(uid: string, date: string): Promise<CareerReading | null> {
+    const key = `${PREFIX}career_tarot_${uid}_${date}`;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  },
+  async saveCareerReading(uid: string, reading: CareerReading): Promise<void> {
+    const key = `${PREFIX}career_tarot_${uid}_${reading.date}`;
+    await AsyncStorage.setItem(key, JSON.stringify(reading));
+  },
+
+  // Shadow Energy session storage
+  async getShadowSession(uid: string, date: string): Promise<ShadowSession | null> {
+    const key = `${PREFIX}shadow_session_${uid}_${date}`;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  },
+  async saveShadowSession(uid: string, session: ShadowSession): Promise<void> {
+    const key = `${PREFIX}shadow_session_${uid}_${session.date}`;
+    await AsyncStorage.setItem(key, JSON.stringify(session));
+  },
+  async getYesterdayShadowSession(uid: string): Promise<ShadowSession | null> {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dateStr = yesterday.toISOString().split('T')[0];
+    return storage.getShadowSession(uid, dateStr);
+  },
+
+  // Shadow Energy reflection storage
+  async getShadowReflection(sessionId: string): Promise<ShadowReflection | null> {
+    const key = `${PREFIX}shadow_reflection_${sessionId}`;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  },
+  async saveShadowReflection(reflection: ShadowReflection): Promise<void> {
+    const key = `${PREFIX}shadow_reflection_${reflection.sessionId}`;
+    await AsyncStorage.setItem(key, JSON.stringify(reflection));
+  },
+
+  // Shadow first-use tracking
+  async isShadowFirstUsed(uid: string): Promise<boolean> {
+    const key = `${PREFIX}shadow_first_used_${uid}`;
+    const val = await AsyncStorage.getItem(key);
+    return val === 'true';
+  },
+  async markShadowFirstUsed(uid: string): Promise<void> {
+    const key = `${PREFIX}shadow_first_used_${uid}`;
+    await AsyncStorage.setItem(key, 'true');
+  },
+
+  // Deep Reflection session (no resume — only save on close)
+  async saveDeepRefSession(session: DeepRefSession): Promise<void> {
+    const key = `${PREFIX}deep_ref_${session.userId}_${session.id}`;
+    await AsyncStorage.setItem(key, JSON.stringify(session));
+  },
+
   // Generic spread completion tracking (for non-PPF spreads)
   async getSpreadReading(uid: string, spreadType: string, date: string): Promise<any | null> {
     const key = `${PREFIX}spread_${spreadType}_${uid}_${date}`;
@@ -145,9 +200,17 @@ export const storage = {
     const love = await storage.getLoveReading(uid, today);
     status['love_reading'] = !!love;
 
+    // Check Career Reading
+    const career = await storage.getCareerReading(uid, today);
+    status['career_money'] = !!career;
+
+    // Check Shadow Session
+    const shadow = await storage.getShadowSession(uid, today);
+    status['shadow_energy'] = !!shadow;
+
     // Check other spreads
     for (const spread of spreads) {
-      if (spread === 'past_present_future' || spread === 'you_them_energy' || spread === 'love_reading') continue;
+      if (spread === 'past_present_future' || spread === 'you_them_energy' || spread === 'love_reading' || spread === 'career_money' || spread === 'shadow_energy') continue;
       const data = await storage.getSpreadReading(uid, spread, today);
       status[spread] = !!data;
     }

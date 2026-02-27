@@ -23,6 +23,9 @@ import DailyCardScreen from './screens/DailyCard';
 import PastPresentFutureScreen from './screens/PastPresentFuture';
 import YouThemEnergyScreen from './screens/YouThemEnergy';
 import LoveReadingScreen from './screens/LoveReading';
+import CareerReadingScreen from './screens/CareerReading';
+import ShadowSessionScreen from './screens/ShadowSession';
+import DeepReflectionScreen from './screens/DeepReflection';
 import { colors } from './styles/theme';
 
 const App: React.FC = () => {
@@ -187,6 +190,9 @@ const App: React.FC = () => {
       case 'PAST_PRESENT_FUTURE': return userProfile ? <PastPresentFutureScreen profile={userProfile} navigate={navigate} /> : null;
       case 'YOU_THEM_ENERGY': return userProfile ? <YouThemEnergyScreen profile={userProfile} navigate={navigate} /> : null;
       case 'LOVE_READING': return userProfile ? <LoveReadingScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'CAREER_READING': return userProfile ? <CareerReadingScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'SHADOW_READING': return userProfile ? <ShadowSessionScreen profile={userProfile} navigate={navigate} /> : null;
+      case 'DEEP_REFLECTION': return userProfile ? <DeepReflectionScreen profile={userProfile} navigate={navigate} /> : null;
       default: return <WelcomeScreen onContinue={() => navigate('SIGN_IN')} />;
     }
   };

@@ -10,6 +10,8 @@ import { storage } from '../services/storage';
 import { translations } from '../i18n/translations';
 import { colors, glassPanel } from '../styles/theme';
 import CosmicLoader from '../components/CosmicLoader';
+import { CardLoadingOverlay, InterpretingShimmer } from '../components/CardLoadingOverlay';
+import { showReadingExitAd } from '../services/admobInterstitial';
 import Icon from '../components/Icon';
 
 type Stage = 'CATEGORY' | 'READING';
@@ -439,6 +441,9 @@ const PastPresentFutureScreen: React.FC<PPFProps> = ({ profile, navigate }) => {
                                             style={[styles.cardImage, card.isReversed && { transform: [{ rotate: '180deg' }] }]}
                                         />
                                     </Animated.View>
+
+                                    {/* Loading overlay on card */}
+                                    {card.isRevealed && card.isLoading && <CardLoadingOverlay color="#8b5cf6" />}
                                 </Pressable>
                                 {card.isRevealed && (
                                     <Text style={styles.cardNameLabel} numberOfLines={2}>
@@ -464,10 +469,7 @@ const PastPresentFutureScreen: React.FC<PPFProps> = ({ profile, navigate }) => {
                             </View>
 
                             {card.isLoading ? (
-                                <View style={styles.loadingBlock}>
-                                    <CosmicLoader size="small" />
-                                    <Text style={styles.loadingText}>{t.ppfCosmosInterpreting}</Text>
-                                </View>
+                                <InterpretingShimmer message={t.ppfCosmosInterpreting} color="#8b5cf6" />
                             ) : (
                                 <>
                                     <Text style={styles.cardHeader}>
@@ -498,10 +500,7 @@ const PastPresentFutureScreen: React.FC<PPFProps> = ({ profile, navigate }) => {
 
                 {/* Final integration */}
                 {finalLoading && (
-                    <View style={styles.loadingBlock}>
-                        <CosmicLoader size="small" />
-                        <Text style={styles.loadingText}>{(t as any).ppfIntegrating || 'Weaving your threads together...'}</Text>
-                    </View>
+                    <InterpretingShimmer message={(t as any).ppfIntegrating || 'Weaving your threads together...'} color="#8b5cf6" lineCount={5} />
                 )}
 
                 {finalIntegration ? (
@@ -521,7 +520,7 @@ const PastPresentFutureScreen: React.FC<PPFProps> = ({ profile, navigate }) => {
                 {finalIntegration ? (
                     <View style={styles.exitBlock}>
                         <Text style={styles.closingText}>{t.ppfClosing}</Text>
-                        <Pressable onPress={() => navigate('TAROT')} style={styles.exitBtn}>
+                        <Pressable onPress={() => showReadingExitAd(!!profile.subscription?.isPremium, () => navigate('TAROT'))} style={styles.exitBtn}>
                             <Text style={styles.exitBtnText}>{t.ppfExploreAnother}</Text>
                         </Pressable>
                     </View>

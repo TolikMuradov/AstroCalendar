@@ -50,7 +50,7 @@ const RewardedAdModal: React.FC<RewardedAdModalProps> = ({ isOpen, onClose, onCo
         }
       },
       onFail: (error) => {
-        setErrorMsg(error || 'Failed to load ad');
+        setErrorMsg(typeof error === 'string' ? error : error?.message || 'Failed to load ad');
         setAdState('error');
       },
     });

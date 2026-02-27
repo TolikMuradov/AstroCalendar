@@ -44,6 +44,38 @@ async function callOpenAI(prompt: string, maxTokens: number = 2048) {
   return JSON.parse(cleanText);
 }
 
+// Multi-message chat for Deep Reflection sessions
+async function callOpenAIChat(messages: { role: string; content: string }[], maxTokens: number = 1024) {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+
+  const response = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.8,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Empty response from OpenAI');
+
+  const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  return JSON.parse(cleanText);
+}
+
 async function callGroq(prompt: string, maxTokens: number = 4096) {
   if (!GROQ_KEY) {
     console.error('Groq API Key is missing!');
@@ -460,4 +492,489 @@ Return ONLY valid JSON:
 }`;
 
   return await callOpenAI(prompt, 512);
+}
+
+export async function generateCareerCardInterpretation(
+  profile: UserProfile,
+  cardName: string,
+  isReversed: boolean,
+  position: 'CurrentPosition' | 'HiddenBlock' | 'Opportunity',
+  diagnostic: { workSituation: string; financialStress: string; internalObstacle: string; mainWorry?: string }
+): Promise<{ objectiveMeaning: string; directAssessment: string }> {
+  const langName = getLangName(profile.locale);
+  const orientation = isReversed ? 'Reversed' : 'Upright';
+
+  const positionContext = position === 'CurrentPosition'
+    ? 'This card represents where the user truly stands right now — professionally and financially. No illusions.'
+    : position === 'HiddenBlock'
+    ? 'This card reveals the internal block or blind spot holding the user back. The thing they might not want to hear.'
+    : 'This card shows the opportunity window — what is realistically available if the user takes responsibility.';
+
+  const worryLine = diagnostic.mainWorry ? `\nUser's main worry (in their own words): "${diagnostic.mainWorry}"` : '';
+
+  const prompt = `You are a composed and realistic tarot mentor focusing on career growth.
+
+Tone: Calm. Direct. Insightful. Mildly firm. No exaggerated mysticism. No empty reassurance. Do not predict events. Focus on patterns, mindset and responsibility.
+
+This is a CAREER & MONEY tarot reading.
+${positionContext}
+
+User diagnostic answers:
+- Work situation: ${diagnostic.workSituation}
+- Financial stress: ${diagnostic.financialStress}
+- Main internal obstacle: ${diagnostic.internalObstacle}${worryLine}
+
+Rules:
+- Sound like a calm but honest mentor, not a fortune teller.
+- Be grounded and realistic. No prophecy. No "everything will be fine" clichés.
+- If the card reveals weakness, say it calmly. Do not attack. Do not sugarcoat.
+- Use phrases like "This card often reflects...", "Based on what you shared...", "The pattern here suggests..."
+- No emojis. No bullet points. Just clear, structured prose.
+- 200-280 words total across both sections.
+- Address ${profile.name} by name occasionally.
+
+Card: ${cardName} (${orientation})
+Position: ${position === 'CurrentPosition' ? 'Current Position' : position === 'HiddenBlock' ? 'Hidden Block' : 'Opportunity Window'}
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign} (${profile.computedProfile.westernZodiac.element})
+Today: ${new Date().toISOString().split('T')[0]}
+
+Language: ALL text in ${langName}. Write naturally as a native speaker would.
+
+Return ONLY valid JSON:
+{
+  "objectiveMeaning": "Explain the traditional meaning of this card in a professional/financial context. Clear language. No mystic drama. Like explaining it to a colleague.",
+  "directAssessment": "Relate the card to the user's diagnostic answers. Be realistic. Speak like a mentor who genuinely wants to help but refuses to lie."
+}`;
+
+  return await callOpenAI(prompt, 1024);
+}
+
+export async function generateCareerFinalSynthesis(
+  profile: UserProfile,
+  currentCardName: string,
+  blockCardName: string,
+  opportunityCardName: string,
+  diagnostic: { workSituation: string; financialStress: string; internalObstacle: string; mainWorry?: string }
+): Promise<{ finalSynthesis: string }> {
+  const langName = getLangName(profile.locale);
+  const worryLine = diagnostic.mainWorry ? `\nMain worry: "${diagnostic.mainWorry}"` : '';
+
+  const prompt = `You are a composed and realistic tarot mentor wrapping up a career reading. You've just laid out three cards — Current Position (${currentCardName}), Hidden Block (${blockCardName}), Opportunity Window (${opportunityCardName}) — for ${profile.name}.
+
+User context:
+- Work: ${diagnostic.workSituation}
+- Financial stress: ${diagnostic.financialStress}
+- Internal obstacle: ${diagnostic.internalObstacle}${worryLine}
+
+Write a "Professional Reality Check" in 180-250 words.
+
+Rules:
+- Connect the three cards logically.
+- Mention patterns from user answers.
+- Identify the main growth leverage point.
+- Offer one grounded strategic direction.
+- No mystical statements. No fate language. No exact predictions.
+- Focus on awareness and decision responsibility.
+- Sound like a mentor giving their honest assessment after reviewing all three cards.
+- End with something actionable, not inspirational fluff.
+
+Language: ALL text in ${langName}. Write like a native speaker, naturally.
+
+Return ONLY valid JSON:
+{
+  "finalSynthesis": "text"
+}`;
+
+  return await callOpenAI(prompt, 512);
+}
+
+// ========================================
+// Shadow Energy Functions
+// ========================================
+
+export async function generateShadowQuestion1(
+  profile: UserProfile
+): Promise<{ question: string }> {
+  const langName = getLangName(profile.locale);
+
+  const prompt = `You are a calm, psychologically aware shadow work facilitator — not a fortune teller. You are initiating a shadow energy tarot session.
+
+Your task: Generate ONE psychologically probing, emotionally neutral question to begin the session. This question should gently touch on hidden patterns, avoidance, or unspoken tension — without being invasive.
+
+Rules:
+- Maximum 20 words.
+- No mystical language. No fate references. No predictions.
+- Sound like a thoughtful therapist's opening — curious but non-judgmental.
+- Avoid generic questions like "How are you feeling?" — go deeper.
+- Examples of good style: "What are you avoiding looking at right now?", "What keeps coming back even when you try to move past it?"
+
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign}
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "question": "your question here"
+}`;
+
+  return await callOpenAI(prompt, 256);
+}
+
+export async function generateShadowQuestion2(
+  profile: UserProfile,
+  question1: string,
+  answer1: string
+): Promise<{ question: string }> {
+  const langName = getLangName(profile.locale);
+
+  const prompt = `You are a calm shadow work facilitator continuing a session. You asked the user a question and they answered. Now ask a DEEPER follow-up question based on their answer.
+
+Previous question: "${question1}"
+User's answer: "${answer1}"
+
+Rules:
+- Maximum 20 words.
+- Go deeper than the first question — probe gently into the WHY behind their answer.
+- No mystical language. No predictions. No reassurance.
+- Sound like a skilled psychologist asking a clarifying question.
+- Don't repeat themes from the first question — build on what they revealed.
+
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign}
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "question": "your deeper question here"
+}`;
+
+  return await callOpenAI(prompt, 256);
+}
+
+export async function generateShadowMainInterpretation(
+  profile: UserProfile,
+  cardName: string,
+  isReversed: boolean,
+  question1: string,
+  answer1: string,
+  question2: string,
+  answer2: string
+): Promise<{ mainText: string; intensityScore: number }> {
+  const langName = getLangName(profile.locale);
+  const orientation = isReversed ? 'Reversed' : 'Upright';
+
+  const prompt = `You are a calm, insightful shadow work facilitator analyzing a tarot card through a psychological lens.
+
+The user has answered two probing questions. Now interpret the drawn card through the lens of their shadow — the parts of themselves they hide, deny, or don't fully see.
+
+Session context:
+- Question 1: "${question1}" → Answer: "${answer1}"
+- Question 2: "${question2}" → Answer: "${answer2}"
+
+Card: ${cardName} (${orientation})
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign} (${profile.computedProfile.westernZodiac.element})
+
+Write three sections:
+1. **Shadow Archetype Meaning**: What this card reveals about the user's hidden patterns. Not traditional card meaning — shadow-specific.
+2. **Psychological Pattern**: Connect the card to their answers. What pattern is operating beneath the surface?
+3. **Personal Reflection**: A direct, compassionate but unflinching observation about what they might not want to see.
+
+Rules:
+- 250-320 words total across all three sections.
+- Calm, direct, insightful tone. No mysticism. No fantasy. No prophecy.
+- No empty reassurance. No fear tactics. No therapy advice.
+- Use phrases like "This card mirrors...", "What your answers suggest...", "The shadow here is..."
+- Be honest but never cruel.
+- Also return an intensity_score (1-10) based on how deeply the card + answers reveal shadow material. 7+ means heavy shadow content.
+
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "mainText": "Full interpretation text with all three sections as flowing prose",
+  "intensityScore": 7
+}`;
+
+  return await callOpenAI(prompt, 1024);
+}
+
+export async function generateShadowSecretInterpretation(
+  profile: UserProfile,
+  mainCardName: string,
+  secretCardName: string,
+  isReversed: boolean,
+  question1: string,
+  answer1: string,
+  question2: string,
+  answer2: string,
+  mainText: string
+): Promise<{ secretText: string }> {
+  const langName = getLangName(profile.locale);
+  const orientation = isReversed ? 'Reversed' : 'Upright';
+
+  const prompt = `You are a shadow work facilitator. A SECRET CARD has appeared — this is a deeper layer that the main card didn't reveal.
+
+Context:
+- Main card: ${mainCardName}
+- Previous interpretation summary themes were about shadow patterns
+- Question 1: "${question1}" → Answer: "${answer1}"
+- Question 2: "${question2}" → Answer: "${answer2}"
+
+Secret card: ${secretCardName} (${orientation})
+User: ${profile.name}, ${profile.computedProfile.westernZodiac.sign}
+
+Write a "Deeper Shadow Layer" interpretation:
+- What this secret card adds that the main card missed
+- A hidden dynamic or blind spot the user isn't aware of
+- How this connects to what they shared
+
+Rules:
+- 180-220 words.
+- More intense and direct than the main interpretation.
+- No mysticism. No fortune telling. No empty comfort.
+- Sound like uncovering something that was always there but unseen.
+
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "secretText": "text"
+}`;
+
+  return await callOpenAI(prompt, 512);
+}
+
+export async function generateShadowIntegration(
+  profile: UserProfile,
+  mainCardName: string,
+  secretCardName: string | null,
+  question1: string,
+  answer1: string,
+  question2: string,
+  answer2: string
+): Promise<{ integrationText: string }> {
+  const langName = getLangName(profile.locale);
+  const secretLine = secretCardName ? `A secret card (${secretCardName}) also appeared, revealing a deeper layer.` : 'No secret card appeared — the main card carried the full message.';
+
+  const prompt = `You are a shadow work facilitator wrapping up a session. You need to create a final integration that ties everything together.
+
+Session:
+- Q1: "${question1}" → A1: "${answer1}"
+- Q2: "${question2}" → A2: "${answer2}"
+- Main card: ${mainCardName}
+- ${secretLine}
+
+Write a "Shadow Integration" — a calm, grounded closing reflection.
+- Connect the user's answers to the cards
+- Name the core shadow pattern that emerged
+- Offer ONE awareness point (not advice, not a to-do — just awareness)
+- End with a reflective, grounding statement
+
+Rules:
+- 180-220 words.
+- Calm, reflective, grounded tone.
+- No mysticism. No predictions. No therapy recommendations.
+- Sound like closing a meditation — bringing the user back to themselves.
+
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "integrationText": "text"
+}`;
+
+  return await callOpenAI(prompt, 512);
+}
+
+export async function generateShadowReflectionFollowup(
+  profile: UserProfile,
+  yesterdaySession: { question1: string; answer1: string; question2: string; answer2: string; mainCardName: string; mainText: string },
+  reflectionText: string
+): Promise<{ aiFollowupText: string }> {
+  const langName = getLangName(profile.locale);
+
+  const prompt = `You are a shadow work facilitator providing a next-day reflection follow-up.
+
+Yesterday's session:
+- Q1: "${yesterdaySession.question1}" → A1: "${yesterdaySession.answer1}"
+- Q2: "${yesterdaySession.question2}" → A2: "${yesterdaySession.answer2}"
+- Main card: ${yesterdaySession.mainCardName}
+
+The user was asked to notice if this shadow pattern showed up today. Their reflection:
+"${reflectionText}"
+
+Analyze what shifted, what repeated, and what emerging awareness you see.
+
+Rules:
+- 180-240 words.
+- Acknowledge what they noticed.
+- Point out connections between yesterday's reading and today's observation.
+- Identify whether the pattern repeated, shifted, or the user gained new perspective.
+- End with a reflective question — something to carry forward.
+- No mysticism. No predictions. No therapy advice.
+
+Language: ALL text in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "aiFollowupText": "text"
+}`;
+
+  return await callOpenAI(prompt, 512);
+}
+
+// ============================
+// DEEP REFLECTION GPT FUNCTIONS
+// ============================
+
+const DEEP_REF_SYSTEM_PROMPT = `You are guiding a high-depth clarity session.
+
+Tone:
+Calm. Intelligent. Direct. Grounded. Psychologically aware.
+Not mystical drama. Not manipulative. Not overly comforting.
+
+Goals:
+- Identify the core emotion.
+- Identify the hidden assumption.
+- Identify the responsibility axis.
+- Reflect the user's words back intelligently.
+- Gently challenge inconsistencies.
+- Do not give direct solutions.
+- Do not predict future events.
+- Do not provide medical, legal, or therapy advice.
+- Do not create emotional dependency.
+
+Every response MUST end with a subtle continuation hook.
+Examples: "There is another layer here." / "Would you like to look at it?" / "This may not be the whole story."
+
+Always respond with valid JSON only.`;
+
+export async function generateDeepRefInitial(
+  profile: UserProfile,
+  userText: string
+): Promise<{ response: string }> {
+  const langName = getLangName(profile.locale);
+
+  const messages = [
+    { role: 'system', content: DEEP_REF_SYSTEM_PROMPT },
+    { role: 'user', content: `The user seeks clarity. This is their opening expression:
+
+"${userText}"
+
+Structure your response:
+1) Emotional Reflection — Name the core emotion you detect beneath the surface.
+2) Pattern Observation — Identify a behavioral or relational pattern.
+3) Hidden Assumption — Surface an assumption the user may not be aware of.
+4) Subtle Challenge — Gently question one part of their narrative.
+
+End with a continuation hook.
+
+Response length: 350-600 words.
+Language: ALL text MUST be in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "response": "your full text here"
+}` },
+  ];
+
+  return await callOpenAIChat(messages, 1024);
+}
+
+export async function generateDeepRefAction(
+  profile: UserProfile,
+  conversationHistory: { role: string; text: string }[],
+  actionType: 'go_deeper' | 'examine_role' | 'see_their_energy',
+  actionCount: number
+): Promise<{ response: string }> {
+  const langName = getLangName(profile.locale);
+
+  const actionInstructions: Record<string, string> = {
+    go_deeper: `Focus on emotional intensity. Zoom into one specific sentence or phrase from the user's previous messages. Ask one piercing but calm question. Offer a sharper reflection. Must end with continuation hook.`,
+    examine_role: `Analyze the user's own contribution to the situation they described. Highlight avoidance patterns. Maintain calm tone. No blaming language. Emphasize choice and awareness. Must end with continuation hook.`,
+    see_their_energy: `Analyze the dynamic from the other person's perspective (as described by the user). Do not assume malicious intent. Suggest possible internal drivers. Make no definitive statements about the other person. Must end with continuation hook.`,
+  };
+
+  const softLimitNote = actionCount >= 10
+    ? `\nThe user has done ${actionCount} deep actions. Gently suggest they may need time to sit with this. But still respond fully if they continue.`
+    : '';
+
+  const messages: { role: string; content: string }[] = [
+    { role: 'system', content: DEEP_REF_SYSTEM_PROMPT },
+  ];
+
+  for (const msg of conversationHistory) {
+    messages.push({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.text,
+    });
+  }
+
+  messages.push({
+    role: 'user',
+    content: `Action requested: ${actionType.replace(/_/g, ' ').toUpperCase()}
+
+${actionInstructions[actionType]}
+${softLimitNote}
+
+Build on all previous messages. Quote or paraphrase the user where appropriate. Never reset tone.
+Response length: 300-500 words.
+Language: ALL text MUST be in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "response": "your full text here"
+}`,
+  });
+
+  return await callOpenAIChat(messages, 1024);
+}
+
+export async function generateDeepRefCardReveal(
+  profile: UserProfile,
+  conversationHistory: { role: string; text: string }[],
+  cardName: string,
+  isReversed: boolean,
+  actionCount: number
+): Promise<{ response: string }> {
+  const langName = getLangName(profile.locale);
+
+  const softLimitNote = actionCount >= 10
+    ? `\nThe user has done ${actionCount} deep actions. Gently suggest they may need time to sit with this.`
+    : '';
+
+  const messages: { role: string; content: string }[] = [
+    { role: 'system', content: DEEP_REF_SYSTEM_PROMPT },
+  ];
+
+  for (const msg of conversationHistory) {
+    messages.push({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.text,
+    });
+  }
+
+  messages.push({
+    role: 'user',
+    content: `A tarot card has been drawn to mirror this session's energy.
+
+Card: ${cardName} (${isReversed ? 'Reversed' : 'Upright'})
+
+Interpretation structure:
+1) Archetypal meaning — What this card represents.
+2) How this energy mirrors the current issue the user is processing.
+3) Behavioral implication — What this suggests about the user's choices.
+
+Keep grounded. No prophecy. No fear language. No destiny claims.
+End with continuation hook.
+${softLimitNote}
+
+Response length: 300-500 words.
+Language: ALL text MUST be in ${langName}. Write naturally as a native speaker.
+
+Return ONLY valid JSON:
+{
+  "response": "your full text here"
+}`,
+  });
+
+  return await callOpenAIChat(messages, 1024);
 }

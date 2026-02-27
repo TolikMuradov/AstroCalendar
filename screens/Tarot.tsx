@@ -111,6 +111,18 @@ const TarotScreen: React.FC<TarotProps> = ({ profile, navigate }) => {
       navigate('LOVE_READING');
       return;
     }
+    if (type === 'career_money') {
+      navigate('CAREER_READING');
+      return;
+    }
+    if (type === 'shadow_energy') {
+      navigate('SHADOW_READING');
+      return;
+    }
+    if (type === 'deep_reflection') {
+      navigate('DEEP_REFLECTION');
+      return;
+    }
 
     // For other spreads: if already done today, still navigate (show cached)
     if (spreadStatus[type]) {
@@ -133,6 +145,7 @@ const TarotScreen: React.FC<TarotProps> = ({ profile, navigate }) => {
     { id: 'love_reading', title: t.spreadLoveReading, icon: '❤️' },
     { id: 'career_money', title: t.spreadCareerMoney, icon: '💼' },
     { id: 'shadow_energy', title: t.spreadShadowEnergy, icon: '🌑' },
+    { id: 'deep_reflection', title: (t as any).spreadDeepReflection || 'Deep Reflection', icon: '🕳️' },
     { id: 'fate_choose', title: t.spreadFateChoose, icon: '✨' },
   ];
 
@@ -208,7 +221,7 @@ const TarotScreen: React.FC<TarotProps> = ({ profile, navigate }) => {
           <Text style={styles.sectionTitle}>{t.tarotSpiritualSpreads}</Text>
           <View style={styles.grid}>
             {tarotOptions.map((opt) => {
-              const cost = 10;
+              const cost = opt.id === 'career_money' ? 12 : opt.id === 'shadow_energy' ? 18 : opt.id === 'deep_reflection' ? 25 : 10;
               const isDone = !!spreadStatus[opt.id];
               return (
                 <TarotCardItem

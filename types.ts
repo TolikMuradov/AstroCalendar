@@ -1,4 +1,4 @@
-export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE' | 'EMPTY_READING' | 'DAILY_CARD' | 'PAST_PRESENT_FUTURE' | 'YOU_THEM_ENERGY' | 'LOVE_READING';
+export type Screen = 'WELCOME' | 'SIGN_IN' | 'LANG_SELECT' | 'ONBOARDING' | 'DASHBOARD' | 'CALENDAR' | 'TAROT' | 'PROFILE' | 'PREMIUM' | 'COMPARE' | 'EMPTY_READING' | 'DAILY_CARD' | 'PAST_PRESENT_FUTURE' | 'YOU_THEM_ENERGY' | 'LOVE_READING' | 'CAREER_READING' | 'SHADOW_READING' | 'DEEP_REFLECTION';
 
 export type Locale = 'en' | 'tr' | 'th' | 'es' | 'fr' | 'de' | 'ja';
 
@@ -80,6 +80,12 @@ export const COINS_PER_AD = 1; // coins earned per rewarded ad
 export const LUCKY_LOCKED_COST = 1; // coins to unlock a locked lucky number
 export const TAROT_READING_COST = 0; // Daily card is free
 export const TAROT_SPREAD_COST = 10; // Specialized spreads cost 10 coins
+export const CAREER_SPREAD_COST = 12; // Career & Money spread costs 12 coins
+export const SHADOW_FIRST_COST = 12; // Shadow Energy first session cost
+export const SHADOW_SESSION_COST = 18; // Shadow Energy subsequent session cost
+export const SHADOW_REFLECTION_COST = 2; // Shadow Energy reflection cost
+export const DEEP_REF_SESSION_COST = 25; // Deep Reflection session entry cost
+export const DEEP_REF_ACTION_COST = 5; // Deep Reflection each action cost
 
 // Tarot Reading Types
 export interface TarotReading {
@@ -152,6 +158,34 @@ export interface YouThemEnergyReading {
   generatedAt: string;
 }
 
+export interface CareerDiagnostic {
+  workSituation: string;
+  financialStress: string;
+  internalObstacle: string;
+  mainWorry?: string;
+}
+
+export interface CareerCardData {
+  id: number;
+  name: string;
+  isReversed: boolean;
+  keywords: string[];
+  objectiveMeaning: string;
+  directAssessment: string;
+}
+
+export interface CareerReading {
+  id: string;
+  diagnostic: CareerDiagnostic;
+  currentPositionCard: CareerCardData;
+  hiddenBlockCard: CareerCardData;
+  opportunityCard: CareerCardData;
+  finalSynthesis: string;
+  date: string;
+  locale: Locale;
+  generatedAt: string;
+}
+
 export interface LoveCardData {
   id: number;
   name: string;
@@ -195,4 +229,67 @@ export interface MonthlyInsight {
   monthTheme: string; // Overall theme for the month
   days: MonthlyDayInsight[];
   generatedAt: string;
+}
+
+// Shadow Energy Types
+export interface ShadowCardData {
+  id: number;
+  name: string;
+  isReversed: boolean;
+  keywords: string[];
+}
+
+export interface ShadowSession {
+  id: string;
+  userId: string;
+  date: string;
+  question1: string;
+  answer1: string;
+  question2: string;
+  answer2: string;
+  mainCard: ShadowCardData;
+  mainText: string;
+  intensityScore: number;
+  secretCard: ShadowCardData | null;
+  secretText: string | null;
+  integrationText: string;
+  locale: Locale;
+  generatedAt: string;
+}
+
+export interface ShadowReflection {
+  id: string;
+  sessionId: string;
+  date: string;
+  userReflectionText: string;
+  aiFollowupText: string;
+  locale: Locale;
+  generatedAt: string;
+}
+
+// Deep Reflection Types
+export type DeepRefActionType = 'initial' | 'go_deeper' | 'reveal_card' | 'examine_role' | 'see_their_energy';
+
+export interface DeepRefMessage {
+  id: string;
+  role: 'user' | 'ai';
+  text: string;
+  actionType?: DeepRefActionType;
+  cardName?: string;
+  cardIsReversed?: boolean;
+  timestamp: string;
+}
+
+export interface DeepRefSession {
+  id: string;
+  userId: string;
+  date: string;
+  initialText: string;
+  messages: DeepRefMessage[];
+  coinsSpentTotal: number;
+  actionCount: number;
+  status: 'active' | 'closed';
+  locale: Locale;
+  createdAt: string;
+  closedAt?: string;
 }

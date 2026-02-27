@@ -289,8 +289,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ profile, navigate }) => {
               </View>
               <View style={styles.luckyRow}>
                 {insight.luckyNumbers.map((num, i) => {
-                  const isFirst = i === 0;
-                  const isLocked = !isPremium && !isFirst && !unlockedIndices.includes(i);
+                  const isLocked = !isPremium && i >= 2 && !unlockedIndices.includes(i);
                   return (
                     <Pressable key={i} onPress={() => isLocked ? handleUnlockLucky(i) : null} style={[styles.luckyBall, isLocked && styles.luckyLocked]}>
                       {isLocked ? (

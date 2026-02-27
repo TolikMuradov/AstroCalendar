@@ -10,6 +10,8 @@ import { storage } from '../services/storage';
 import { translations } from '../i18n/translations';
 import { colors, glassPanel } from '../styles/theme';
 import CosmicLoader from '../components/CosmicLoader';
+import { CardLoadingOverlay, InterpretingShimmer } from '../components/CardLoadingOverlay';
+import { showReadingExitAd } from '../services/admobInterstitial';
 import Icon from '../components/Icon';
 
 type Stage = 'SETUP' | 'READING';
@@ -579,6 +581,9 @@ const LoveReadingScreen: React.FC<LoveReadingProps> = ({ profile, navigate }) =>
                                             ))}
                                         </View>
                                     )}
+
+                                    {/* Loading overlay on card */}
+                                    {card.isRevealed && card.isLoading && <CardLoadingOverlay color="#ff3366" />}
                                 </Pressable>
                                 {card.isRevealed && (
                                     <Text style={styles.cardNameLabel} numberOfLines={2}>
@@ -604,10 +609,7 @@ const LoveReadingScreen: React.FC<LoveReadingProps> = ({ profile, navigate }) =>
                             </View>
 
                             {card.isLoading ? (
-                                <View style={styles.loadingBlock}>
-                                    <CosmicLoader size="small" />
-                                    <Text style={styles.loadingText}>{(t as any).loveCosmosInterpreting || 'The universe is reading your heart...'}</Text>
-                                </View>
+                                <InterpretingShimmer message={(t as any).loveCosmosInterpreting || 'The universe is reading your heart...'} color="#ff3366" />
                             ) : (
                                 <>
                                     <Text style={styles.cardHeader}>
@@ -636,10 +638,7 @@ const LoveReadingScreen: React.FC<LoveReadingProps> = ({ profile, navigate }) =>
 
                 {/* Final integration loading */}
                 {finalLoading && (
-                    <View style={styles.loadingBlock}>
-                        <CosmicLoader size="small" />
-                        <Text style={styles.loadingText}>{(t as any).loveIntegrating || 'Weaving your love story together...'}</Text>
-                    </View>
+                    <InterpretingShimmer message={(t as any).loveIntegrating || 'Weaving your love story together...'} color="#ff3366" lineCount={5} />
                 )}
 
                 {/* Love meter + final integration */}
@@ -685,7 +684,7 @@ const LoveReadingScreen: React.FC<LoveReadingProps> = ({ profile, navigate }) =>
                 {finalIntegration ? (
                     <View style={styles.exitBlock}>
                         <Text style={styles.closingText}>{(t as any).loveClosing || 'Love speaks in whispers. Listen closely.'}</Text>
-                        <Pressable onPress={() => navigate('TAROT')} style={styles.exitBtn}>
+                        <Pressable onPress={() => showReadingExitAd(!!profile.subscription?.isPremium, () => navigate('TAROT'))} style={styles.exitBtn}>
                             <Text style={styles.exitBtnText}>{(t as any).ppfExploreAnother || 'Explore Another Reading'}</Text>
                         </Pressable>
                     </View>
